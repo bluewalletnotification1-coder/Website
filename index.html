@@ -140,6 +140,38 @@
             animation: spin 0.8s linear infinite;
         }
 
+        /* Explicit 4-digit input sizing so all 4 boxes fit cleanly inside mobile screens */
+        .otp-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 10px;
+            width: 100%;
+            max-width: 300px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .otp-box {
+            width: 100%;
+            min-width: 0;
+            height: 58px;
+            border-radius: 14px;
+            background-color: #020617;
+            border: 1.5px solid #334155;
+            color: #ffffff;
+            font-size: 1.35rem;
+            font-weight: 800;
+            text-align: center;
+            line-height: 58px;
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .otp-box:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+        }
+
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
@@ -292,32 +324,34 @@
 
         <!-- ==================== VIEW 4: 4-DIGIT SCREEN VERIFICATION ==================== -->
         <section id="view-verify" class="app-view">
-            <div class="text-center mt-2 mb-5">
+            <div class="text-center mt-3 mb-6">
                 <div class="w-14 h-14 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center mx-auto mb-3">
                     <i class="fa-solid fa-shield-halved text-2xl text-emerald-400"></i>
                 </div>
                 <h1 class="text-xl font-extrabold text-white">Verify Your Account</h1>
-                <p class="text-slate-400 text-xs mt-1">Enter the 4-digit verification code sent to your screen.</p>
+                <p class="text-slate-400 text-xs mt-1.5 leading-relaxed max-w-xs mx-auto">
+                    Check the top pop-up notification for your 4-digit code and enter it below.
+                </p>
             </div>
 
-            <!-- On-Screen Code Notification Box -->
-            <div class="bg-blue-950/70 border border-blue-500/40 rounded-2xl p-4 mb-6 text-center">
-                <span class="text-[10px] uppercase tracking-widest text-blue-300 font-bold block mb-1">On-Screen Verification Code</span>
-                <div id="verify-code-badge" class="text-3xl font-mono font-extrabold tracking-[0.35em] text-white">0000</div>
+            <!-- Clean, Full-Width 4-Digit Input Row (No Permanent Code Card) -->
+            <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 mb-6">
+                <label class="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 text-center mb-3">
+                    Enter 4-Digit Verification Code
+                </label>
+                <div class="otp-grid" id="verify-otp-grid">
+                    <input type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="1" aria-label="Verification digit 1" class="v-digit otp-box" oninput="advanceDigit(this, '.v-digit', 0)" onkeydown="handleDigitKeydown(event, '.v-digit', 0)" onpaste="handleDigitPaste(event, '.v-digit')">
+                    <input type="text" inputmode="numeric" maxlength="1" aria-label="Verification digit 2" class="v-digit otp-box" oninput="advanceDigit(this, '.v-digit', 1)" onkeydown="handleDigitKeydown(event, '.v-digit', 1)" onpaste="handleDigitPaste(event, '.v-digit')">
+                    <input type="text" inputmode="numeric" maxlength="1" aria-label="Verification digit 3" class="v-digit otp-box" oninput="advanceDigit(this, '.v-digit', 2)" onkeydown="handleDigitKeydown(event, '.v-digit', 2)" onpaste="handleDigitPaste(event, '.v-digit')">
+                    <input type="text" inputmode="numeric" maxlength="1" aria-label="Verification digit 4" class="v-digit otp-box" oninput="advanceDigit(this, '.v-digit', 3)" onkeydown="handleDigitKeydown(event, '.v-digit', 3)" onpaste="handleDigitPaste(event, '.v-digit')">
+                </div>
             </div>
 
-            <div class="flex justify-center gap-2.5 mb-6">
-                <input type="text" inputmode="numeric" maxlength="1" class="v-digit w-13 h-14 bg-slate-900 border border-slate-700 rounded-xl text-center text-xl font-bold text-white focus:border-blue-500 focus:outline-none" oninput="advanceDigit(this, '.v-digit', 0)">
-                <input type="text" inputmode="numeric" maxlength="1" class="v-digit w-13 h-14 bg-slate-900 border border-slate-700 rounded-xl text-center text-xl font-bold text-white focus:border-blue-500 focus:outline-none" oninput="advanceDigit(this, '.v-digit', 1)">
-                <input type="text" inputmode="numeric" maxlength="1" class="v-digit w-13 h-14 bg-slate-900 border border-slate-700 rounded-xl text-center text-xl font-bold text-white focus:border-blue-500 focus:outline-none" oninput="advanceDigit(this, '.v-digit', 2)">
-                <input type="text" inputmode="numeric" maxlength="1" class="v-digit w-13 h-14 bg-slate-900 border border-slate-700 rounded-xl text-center text-xl font-bold text-white focus:border-blue-500 focus:outline-none" oninput="advanceDigit(this, '.v-digit', 3)">
-            </div>
-
-            <button type="button" onclick="handleVerifyCode()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-3.5 rounded-xl text-sm transition shadow-lg shadow-emerald-600/20">
+            <button type="button" onclick="handleVerifyCode()" class="w-full bg-emerald-600 hover:bg-emerald-500 active:scale-[0.99] text-white font-semibold py-3.5 rounded-xl text-sm transition shadow-lg shadow-emerald-600/20">
                 Verify &amp; Continue
             </button>
 
-            <button type="button" onclick="resendVerifyCode()" class="w-full text-xs text-blue-400 hover:text-blue-300 font-semibold mt-4 py-2">
+            <button type="button" onclick="resendVerifyCode()" class="w-full text-xs text-blue-400 hover:text-blue-300 font-semibold mt-4 py-2.5 rounded-xl hover:bg-slate-800/60 transition">
                 <i class="fa-solid fa-rotate-right mr-1"></i> Resend 4-Digit Code
             </button>
         </section>
@@ -334,22 +368,22 @@
 
             <div class="space-y-5 mb-6">
                 <div>
-                    <label class="block text-xs font-medium text-slate-300 text-center mb-2">Create 4-Digit PIN</label>
-                    <div class="flex justify-center gap-2.5">
-                        <input type="password" inputmode="numeric" maxlength="1" class="p1-digit w-13 h-14 bg-slate-900 border border-slate-700 rounded-xl text-center text-xl font-bold text-white focus:border-purple-500 focus:outline-none" oninput="advanceDigit(this, '.p1-digit', 0)">
-                        <input type="password" inputmode="numeric" maxlength="1" class="p1-digit w-13 h-14 bg-slate-900 border border-slate-700 rounded-xl text-center text-xl font-bold text-white focus:border-purple-500 focus:outline-none" oninput="advanceDigit(this, '.p1-digit', 1)">
-                        <input type="password" inputmode="numeric" maxlength="1" class="p1-digit w-13 h-14 bg-slate-900 border border-slate-700 rounded-xl text-center text-xl font-bold text-white focus:border-purple-500 focus:outline-none" oninput="advanceDigit(this, '.p1-digit', 2)">
-                        <input type="password" inputmode="numeric" maxlength="1" class="p1-digit w-13 h-14 bg-slate-900 border border-slate-700 rounded-xl text-center text-xl font-bold text-white focus:border-purple-500 focus:outline-none" oninput="advanceDigit(this, '.p1-digit', 3)">
+                    <label class="block text-xs font-medium text-slate-300 text-center mb-2.5">Create 4-Digit PIN</label>
+                    <div class="otp-grid">
+                        <input type="password" inputmode="numeric" maxlength="1" aria-label="New PIN digit 1" class="p1-digit otp-box" oninput="advanceDigit(this, '.p1-digit', 0)" onkeydown="handleDigitKeydown(event, '.p1-digit', 0)" onpaste="handleDigitPaste(event, '.p1-digit')">
+                        <input type="password" inputmode="numeric" maxlength="1" aria-label="New PIN digit 2" class="p1-digit otp-box" oninput="advanceDigit(this, '.p1-digit', 1)" onkeydown="handleDigitKeydown(event, '.p1-digit', 1)" onpaste="handleDigitPaste(event, '.p1-digit')">
+                        <input type="password" inputmode="numeric" maxlength="1" aria-label="New PIN digit 3" class="p1-digit otp-box" oninput="advanceDigit(this, '.p1-digit', 2)" onkeydown="handleDigitKeydown(event, '.p1-digit', 2)" onpaste="handleDigitPaste(event, '.p1-digit')">
+                        <input type="password" inputmode="numeric" maxlength="1" aria-label="New PIN digit 4" class="p1-digit otp-box" oninput="advanceDigit(this, '.p1-digit', 3)" onkeydown="handleDigitKeydown(event, '.p1-digit', 3)" onpaste="handleDigitPaste(event, '.p1-digit')">
                     </div>
                 </div>
 
                 <div>
-                    <label class="block text-xs font-medium text-slate-300 text-center mb-2">Confirm 4-Digit PIN</label>
-                    <div class="flex justify-center gap-2.5">
-                        <input type="password" inputmode="numeric" maxlength="1" class="p2-digit w-13 h-14 bg-slate-900 border border-slate-700 rounded-xl text-center text-xl font-bold text-white focus:border-purple-500 focus:outline-none" oninput="advanceDigit(this, '.p2-digit', 0)">
-                        <input type="password" inputmode="numeric" maxlength="1" class="p2-digit w-13 h-14 bg-slate-900 border border-slate-700 rounded-xl text-center text-xl font-bold text-white focus:border-purple-500 focus:outline-none" oninput="advanceDigit(this, '.p2-digit', 1)">
-                        <input type="password" inputmode="numeric" maxlength="1" class="p2-digit w-13 h-14 bg-slate-900 border border-slate-700 rounded-xl text-center text-xl font-bold text-white focus:border-purple-500 focus:outline-none" oninput="advanceDigit(this, '.p2-digit', 2)">
-                        <input type="password" inputmode="numeric" maxlength="1" class="p2-digit w-13 h-14 bg-slate-900 border border-slate-700 rounded-xl text-center text-xl font-bold text-white focus:border-purple-500 focus:outline-none" oninput="advanceDigit(this, '.p2-digit', 3)">
+                    <label class="block text-xs font-medium text-slate-300 text-center mb-2.5">Confirm 4-Digit PIN</label>
+                    <div class="otp-grid">
+                        <input type="password" inputmode="numeric" maxlength="1" aria-label="Confirm PIN digit 1" class="p2-digit otp-box" oninput="advanceDigit(this, '.p2-digit', 0)" onkeydown="handleDigitKeydown(event, '.p2-digit', 0)" onpaste="handleDigitPaste(event, '.p2-digit')">
+                        <input type="password" inputmode="numeric" maxlength="1" aria-label="Confirm PIN digit 2" class="p2-digit otp-box" oninput="advanceDigit(this, '.p2-digit', 1)" onkeydown="handleDigitKeydown(event, '.p2-digit', 1)" onpaste="handleDigitPaste(event, '.p2-digit')">
+                        <input type="password" inputmode="numeric" maxlength="1" aria-label="Confirm PIN digit 3" class="p2-digit otp-box" oninput="advanceDigit(this, '.p2-digit', 2)" onkeydown="handleDigitKeydown(event, '.p2-digit', 2)" onpaste="handleDigitPaste(event, '.p2-digit')">
+                        <input type="password" inputmode="numeric" maxlength="1" aria-label="Confirm PIN digit 4" class="p2-digit otp-box" oninput="advanceDigit(this, '.p2-digit', 3)" onkeydown="handleDigitKeydown(event, '.p2-digit', 3)" onpaste="handleDigitPaste(event, '.p2-digit')">
                     </div>
                 </div>
             </div>
@@ -1026,11 +1060,31 @@
         }
 
         function advanceDigit(el, selector, idx) {
-            el.value = el.value.replace(/[^0-9]/g, "");
+            el.value = el.value.replace(/[^0-9]/g, "").slice(-1);
             const boxes = document.querySelectorAll(selector);
             if (el.value.length === 1 && idx < boxes.length - 1) {
                 boxes[idx + 1].focus();
             }
+        }
+
+        function handleDigitKeydown(event, selector, idx) {
+            const boxes = document.querySelectorAll(selector);
+            if (event.key === "Backspace" && !event.target.value && idx > 0) {
+                boxes[idx - 1].value = "";
+                boxes[idx - 1].focus();
+            }
+        }
+
+        function handleDigitPaste(event, selector) {
+            event.preventDefault();
+            const pasted = (event.clipboardData || window.clipboardData).getData("text").replace(/[^0-9]/g, "").slice(0, 4);
+            if (!pasted) return;
+            const boxes = document.querySelectorAll(selector);
+            pasted.split("").forEach((digit, i) => {
+                if (boxes[i]) boxes[i].value = digit;
+            });
+            const focusIdx = Math.min(pasted.length, boxes.length - 1);
+            if (boxes[focusIdx]) boxes[focusIdx].focus();
         }
 
         // =====================================================================
@@ -1102,18 +1156,22 @@
             };
 
             activeOtpCode = String(Math.floor(1000 + Math.random() * 9000));
-            document.getElementById("verify-code-badge").textContent = activeOtpCode;
             document.querySelectorAll(".v-digit").forEach(i => i.value = "");
 
             showView("view-verify");
-            notify(`Verification Code Sent: ${activeOtpCode}`, "info");
+            notify(`Your 4-digit verification code is: ${activeOtpCode}`, "info");
+            setTimeout(() => {
+                const firstBox = document.querySelector(".v-digit");
+                if (firstBox) firstBox.focus();
+            }, 120);
         }
 
         function resendVerifyCode() {
             activeOtpCode = String(Math.floor(1000 + Math.random() * 9000));
-            document.getElementById("verify-code-badge").textContent = activeOtpCode;
             document.querySelectorAll(".v-digit").forEach(i => i.value = "");
-            notify(`New Verification Code Sent: ${activeOtpCode}`, "info");
+            notify(`New 4-digit verification code: ${activeOtpCode}`, "info");
+            const firstBox = document.querySelector(".v-digit");
+            if (firstBox) firstBox.focus();
         }
 
         function handleVerifyCode() {
@@ -1129,6 +1187,10 @@
             document.querySelectorAll(".p1-digit, .p2-digit").forEach(i => i.value = "");
             showView("view-pin");
             notify("Account verified! Set your compulsory 4-digit Withdrawal PIN.", "success");
+            setTimeout(() => {
+                const firstPin = document.querySelector(".p1-digit");
+                if (firstPin) firstPin.focus();
+            }, 120);
         }
 
         function handleSavePin() {
