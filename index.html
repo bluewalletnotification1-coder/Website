@@ -1,1600 +1,2256 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>GlobalPay — Multi-Currency Wallet & Asset PWA</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>GlobalPay — Multi-Currency Wallet & Transfers</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <style>
+    :root {
+      --bg-primary: #070d1b;
+      --bg-secondary: #0f172a;
+      --bg-card: #131d35;
+      --bg-input: #0a1122;
+      --border: rgba(148, 163, 184, 0.16);
+      --border-focus: #3b82f6;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --accent: #3b82f6;
+      --accent-hover: #2563eb;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --purple: #8b5cf6;
+    }
 
-        /* 1. STRICT BOX-SIZING & OVERFLOW GUARDRAILS */
-        *, *::before, *::after {
-            box-sizing: border-box;
-            -webkit-tap-highlight-color: transparent;
-        }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
 
-        html, body {
-            margin: 0;
-            padding: 0;
-            width: 100%;
-            max-width: 100%;
-            overflow-x: hidden;
-            font-family: 'Inter', sans-serif;
-            background-color: #020617;
-            color: #f8fafc;
-        }
+    html, body {
+      width: 100%;
+      max-width: 100vw;
+      overflow-x: hidden;
+      background-color: var(--bg-primary);
+      color: var(--text-main);
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      min-height: 100vh;
+      line-height: 1.45;
+    }
 
-        body {
-            display: flex;
-            justify-content: center;
-            min-height: 100vh;
-        }
+    .app-shell {
+      width: 100%;
+      max-width: 480px;
+      margin: 0 auto;
+      min-height: 100vh;
+      background: var(--bg-primary);
+      position: relative;
+      padding-bottom: 120px;
+    }
 
-        #app-shell {
-            width: 100%;
-            max-width: 480px;
-            min-height: 100vh;
-            background-color: #0f172a;
-            position: relative;
-            display: flex;
-            flex-direction: column;
-            overflow-x: hidden;
-            box-shadow: 0 0 40px rgba(0, 0, 0, 0.75);
-        }
+    /* Top Notification Banner */
+    #topToastContainer {
+      position: fixed;
+      top: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: calc(100% - 24px);
+      max-width: 456px;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      pointer-events: none;
+    }
 
-        /* 2. STRICT SINGLE-VIEW VISIBILITY (NEVER STACK VIEWS) */
-        .app-view {
-            display: none;
-            width: 100%;
-            max-width: 100%;
-            padding: 20px 18px 120px 18px;
-            word-wrap: break-word;
-            overflow-wrap: break-word;
-        }
+    .toast-banner {
+      background: #1e293b;
+      border: 1px solid rgba(59, 130, 246, 0.45);
+      border-left: 4px solid var(--accent);
+      color: #f8fafc;
+      padding: 12px 14px;
+      border-radius: 12px;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.55);
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      font-size: 13px;
+      pointer-events: auto;
+      animation: slideDown 0.25s ease-out;
+    }
 
-        .app-view.active {
-            display: block;
-            animation: fadeIn 0.22s ease-out;
-        }
+    .toast-banner.success { border-left-color: var(--success); border-color: rgba(16, 185, 129, 0.45); }
+    .toast-banner.warning { border-left-color: var(--warning); border-color: rgba(245, 158, 11, 0.45); }
+    .toast-banner.danger { border-left-color: var(--danger); border-color: rgba(239, 68, 68, 0.45); }
 
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(6px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
+    @keyframes slideDown {
+      from { opacity: 0; transform: translateY(-14px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
 
-        /* 3. STRICT MODAL / BOTTOM SHEET VISIBILITY (HIDDEN UNTIL .open) */
-        .app-modal {
-            display: none !important;
-            position: fixed;
-            inset: 0;
-            z-index: 60;
-            background-color: rgba(2, 6, 23, 0.82);
-            backdrop-filter: blur(6px);
-            align-items: flex-end;
-            justify-content: center;
-            padding: 0;
-        }
+    /* Sticky Top Header */
+    .top-header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: rgba(7, 13, 27, 0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
 
-        .app-modal.open {
-            display: flex !important;
-        }
+    .brand-logo {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 800;
+      font-size: 16px;
+      letter-spacing: -0.02em;
+      white-space: nowrap;
+    }
 
-        .modal-card {
-            width: 100%;
-            max-width: 480px;
-            max-height: 88vh;
-            overflow-y: auto;
-            background-color: #0f172a;
-            border-top: 1px solid #334155;
-            border-radius: 24px 24px 0 0;
-            padding: 22px 18px 110px 18px;
-            box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.7);
-            animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-        }
+    .brand-icon {
+      width: 30px;
+      height: 30px;
+      border-radius: 9px;
+      background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 14px;
+      flex-shrink: 0;
+    }
 
-        @keyframes slideUp {
-            from { transform: translateY(100%); }
-            to { transform: translateY(0); }
-        }
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
 
-        /* 4. TOP NOTIFICATION TOAST BANNER */
-        #toast-banner {
-            position: fixed;
-            top: 12px;
-            left: 50%;
-            transform: translateX(-50%) translateY(-140%);
-            width: calc(100% - 28px);
-            max-width: 444px;
-            z-index: 100;
-            background: #1e293b;
-            border: 1px solid rgba(255, 255, 255, 0.14);
-            border-left: 4px solid #3b82f6;
-            border-radius: 14px;
-            padding: 12px 14px;
-            box-shadow: 0 14px 30px rgba(0, 0, 0, 0.65);
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
-            pointer-events: none;
-        }
+    .header-btn {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      color: var(--text-main);
+      font-size: 11.5px;
+      font-weight: 600;
+      padding: 6px 10px;
+      border-radius: 999px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      white-space: nowrap;
+    }
 
-        #toast-banner.show {
-            transform: translateX(-50%) translateY(0);
-            pointer-events: auto;
-        }
+    .header-btn.admin-pill {
+      background: rgba(139, 92, 246, 0.16);
+      border-color: rgba(139, 92, 246, 0.45);
+      color: #c4b5fd;
+    }
 
-        .glass-panel {
-            background: rgba(30, 41, 59, 0.6);
-            border: 1px solid rgba(148, 163, 184, 0.12);
-        }
+    .header-btn.logout-pill {
+      background: rgba(239, 68, 68, 0.14);
+      border-color: rgba(239, 68, 68, 0.35);
+      color: #fca5a5;
+    }
 
-        .spinner {
-            border: 3px solid rgba(255, 255, 255, 0.15);
-            border-top-color: #3b82f6;
-            border-radius: 50%;
-            width: 24px;
-            height: 24px;
-            animation: spin 0.8s linear infinite;
-        }
+    /* Strict Single-View Switching */
+    .app-view {
+      display: none !important;
+      padding: 20px 16px;
+    }
 
-        /* Explicit 4-digit input sizing so all 4 boxes fit cleanly inside mobile screens */
-        .otp-grid {
-            display: grid;
-            grid-template-columns: repeat(4, minmax(0, 1fr));
-            gap: 10px;
-            width: 100%;
-            max-width: 300px;
-            margin-left: auto;
-            margin-right: auto;
-        }
+    .app-view.active {
+      display: block !important;
+    }
 
-        .otp-box {
-            width: 100%;
-            min-width: 0;
-            height: 58px;
-            border-radius: 14px;
-            background-color: #020617;
-            border: 1.5px solid #334155;
-            color: #ffffff;
-            font-size: 1.35rem;
-            font-weight: 800;
-            text-align: center;
-            line-height: 58px;
-            transition: border-color 0.15s ease, box-shadow 0.15s ease;
-        }
+    /* Typography & Forms */
+    .page-title {
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin-bottom: 6px;
+    }
 
-        .otp-box:focus {
-            outline: none;
-            border-color: #3b82f6;
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
-        }
+    .page-subtitle {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 20px;
+    }
 
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-    </style>
+    .form-group {
+      margin-bottom: 14px;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: #cbd5e1;
+      margin-bottom: 6px;
+    }
+
+    .form-control {
+      width: 100%;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      color: var(--text-main);
+      border-radius: 11px;
+      padding: 12px 13px;
+      font-size: 14px;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.18s;
+    }
+
+    .form-control:focus {
+      border-color: var(--border-focus);
+    }
+
+    select.form-control {
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      background-size: 16px;
+      padding-right: 36px;
+    }
+
+    .checkbox-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      margin: 14px 0 18px;
+      font-size: 12.5px;
+      color: var(--text-muted);
+      cursor: pointer;
+    }
+
+    .checkbox-row input {
+      margin-top: 2px;
+      width: 16px;
+      height: 16px;
+      accent-color: var(--accent);
+      flex-shrink: 0;
+    }
+
+    .btn-primary {
+      width: 100%;
+      background: linear-gradient(135deg, #3b82f6, #2563eb);
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      padding: 13px 16px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-shadow: 0 6px 18px rgba(37, 99, 235, 0.35);
+    }
+
+    .btn-primary:active {
+      transform: scale(0.99);
+    }
+
+    .btn-success {
+      width: 100%;
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      padding: 13px 16px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .btn-secondary {
+      width: 100%;
+      background: var(--bg-card);
+      color: var(--text-main);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px 14px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .text-link {
+      background: none;
+      border: none;
+      color: #60a5fa;
+      font-size: 12.5px;
+      font-weight: 600;
+      cursor: pointer;
+      padding: 0;
+    }
+
+    /* OTP & PIN 4-Digit Input Grid */
+    .otp-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      max-width: 280px;
+      margin: 22px auto;
+    }
+
+    .otp-box {
+      width: 100%;
+      height: 58px;
+      background: var(--bg-input);
+      border: 1.5px solid var(--border);
+      border-radius: 14px;
+      color: #fff;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 24px;
+      font-weight: 700;
+      text-align: center;
+      outline: none;
+    }
+
+    .otp-box:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+    }
+
+    /* Dashboard Balance Card */
+    .balance-hero {
+      background: linear-gradient(145deg, #172554 0%, #0f172a 100%);
+      border: 1px solid rgba(59, 130, 246, 0.32);
+      border-radius: 20px;
+      padding: 18px;
+      margin-bottom: 16px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .wallet-id-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(15, 23, 42, 0.75);
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      padding: 5px 10px;
+      border-radius: 999px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: #93c5fd;
+      cursor: pointer;
+    }
+
+    .primary-balance-amount {
+      font-size: 30px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin-top: 12px;
+      color: #ffffff;
+    }
+
+    .usd-equivalent-line {
+      font-size: 12.5px;
+      color: #93c5fd;
+      margin-top: 3px;
+      font-weight: 500;
+    }
+
+    /* Quick Action Buttons */
+    .action-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin-top: 18px;
+    }
+
+    .action-btn {
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      border-radius: 14px;
+      padding: 11px 6px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      color: #f8fafc;
+      font-size: 11.5px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .action-btn i {
+      width: 32px;
+      height: 32px;
+      border-radius: 10px;
+      background: rgba(59, 130, 246, 0.18);
+      color: #60a5fa;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+    }
+
+    /* Active Withdrawal Status Banner on Dashboard */
+    .withdrawal-status-card {
+      background: var(--bg-card);
+      border: 1px solid rgba(245, 158, 11, 0.4);
+      border-radius: 16px;
+      padding: 14px;
+      margin-bottom: 16px;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 9px;
+      border-radius: 999px;
+      background: rgba(245, 158, 11, 0.16);
+      color: #fbbf24;
+    }
+
+    .status-pill.processing {
+      background: rgba(59, 130, 246, 0.18);
+      color: #60a5fa;
+    }
+
+    .status-pill.appealed {
+      background: rgba(16, 185, 129, 0.18);
+      color: #34d399;
+    }
+
+    /* Currency Wallets List (Fiat Only) */
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin: 18px 0 10px;
+      font-size: 13.5px;
+      font-weight: 700;
+      color: #e2e8f0;
+    }
+
+    .currency-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 12px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 9px;
+    }
+
+    .currency-left {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+    }
+
+    .currency-badge {
+      width: 38px;
+      height: 38px;
+      border-radius: 11px;
+      background: rgba(59, 130, 246, 0.14);
+      border: 1px solid rgba(59, 130, 246, 0.25);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 13px;
+      color: #60a5fa;
+    }
+
+    .currency-name {
+      font-size: 13.5px;
+      font-weight: 700;
+    }
+
+    .currency-sub {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .currency-right {
+      text-align: right;
+    }
+
+    .currency-amt {
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .currency-usd {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    /* Transaction History */
+    .tx-item {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 13px;
+      padding: 11px 13px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    .tx-title {
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .tx-meta {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    /* Strict Hidden-Until-Open Modals */
+    .app-modal {
+      display: none !important;
+      position: fixed;
+      inset: 0;
+      z-index: 200;
+      background: rgba(3, 7, 18, 0.82);
+      backdrop-filter: blur(6px);
+      align-items: flex-end;
+      justify-content: center;
+    }
+
+    .app-modal.open {
+      display: flex !important;
+    }
+
+    .modal-sheet {
+      width: 100%;
+      max-width: 480px;
+      max-height: 90vh;
+      overflow-y: auto;
+      background: var(--bg-secondary);
+      border-top: 1px solid var(--border);
+      border-radius: 22px 22px 0 0;
+      padding: 18px 16px 36px;
+      animation: sheetUp 0.22s ease-out;
+    }
+
+    @keyframes sheetUp {
+      from { transform: translateY(30px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .modal-title {
+      font-size: 16px;
+      font-weight: 800;
+    }
+
+    .close-btn {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Toggle Tabs inside Modals */
+    .toggle-bar {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+      background: var(--bg-input);
+      padding: 4px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      margin-bottom: 14px;
+    }
+
+    .toggle-tab {
+      padding: 8px 6px;
+      border-radius: 9px;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .toggle-tab.active {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .address-box {
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin: 10px 0;
+    }
+
+    .address-text {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: #e2e8f0;
+      word-break: break-all;
+    }
+
+    .copy-mini-btn {
+      background: rgba(59, 130, 246, 0.2);
+      color: #60a5fa;
+      border: 1px solid rgba(59, 130, 246, 0.35);
+      border-radius: 8px;
+      padding: 6px 10px;
+      font-size: 11.5px;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .upload-dropzone {
+      border: 1.5px dashed rgba(148, 163, 184, 0.35);
+      border-radius: 13px;
+      padding: 18px 12px;
+      text-align: center;
+      background: var(--bg-input);
+      cursor: pointer;
+      margin: 10px 0 14px;
+    }
+
+    .receipt-preview {
+      max-width: 100%;
+      max-height: 150px;
+      border-radius: 10px;
+      margin-top: 10px;
+      display: none;
+    }
+
+    .admin-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 12px;
+      margin-bottom: 12px;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+  </style>
 </head>
 <body>
+  <div id="topToastContainer"></div>
 
-    <!-- GLOBAL TOP POP-DOWN NOTIFICATION BANNER -->
-    <div id="toast-banner" role="alert">
-        <i id="toast-icon" class="fa-solid fa-circle-info text-blue-400 text-base shrink-0"></i>
-        <p id="toast-text" class="text-xs font-medium text-slate-100 leading-snug m-0 flex-1">Notification</p>
+  <div class="app-shell">
+    <!-- Persistent Top Header -->
+    <header class="top-header">
+      <div class="brand-logo">
+        <div class="brand-icon"><i class="fa-solid fa-wallet"></i></div>
+        <span>GlobalPay</span>
+      </div>
+      <div class="header-actions">
+        <button class="header-btn admin-pill" onclick="openModal('adminModal')">
+          <i class="fa-solid fa-sliders"></i> Admin
+        </button>
+        <button class="header-btn" onclick="openModal('supportModal')">
+          <i class="fa-solid fa-headset"></i> Support
+        </button>
+        <button class="header-btn logout-pill" id="headerLogoutBtn" style="display:none;" onclick="logoutUser()">
+          <i class="fa-solid fa-right-from-bracket"></i>
+        </button>
+      </div>
+    </header>
+
+    <!-- VIEW 1: SIGN UP / LOGIN -->
+    <section id="authView" class="app-view active">
+      <div id="signupBox">
+        <h1 class="page-title">Create Your Account</h1>
+        <p class="page-subtitle">Select your country to configure your local currency alongside USD, EUR, and GBP wallets.</p>
+
+        <form onsubmit="handleSignup(event)">
+          <div class="form-group">
+            <label class="form-label">Full Name</label>
+            <input type="text" id="regName" class="form-control" placeholder="e.g. John Doe" required />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Email Address</label>
+            <input type="email" id="regEmail" class="form-control" placeholder="you@example.com" required />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Select Country</label>
+            <select id="regCountry" class="form-control" required></select>
+          </div>
+
+          <div class="form-group">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+              <label class="form-label" style="margin:0;">Password</label>
+              <button type="button" class="text-link" onclick="openModal('forgotPasswordModal')">Forgot Password?</button>
+            </div>
+            <input type="password" id="regPassword" class="form-control" placeholder="Create a strong password" minlength="6" required />
+          </div>
+
+          <label class="checkbox-row">
+            <input type="checkbox" id="regTerms" required />
+            <span>I agree to the GlobalPay Terms &amp; Conditions, Multi-Currency Wallet Policy, and Compliance Verification Rules.</span>
+          </label>
+
+          <button type="submit" class="btn-primary">
+            Create Account <i class="fa-solid fa-arrow-right"></i>
+          </button>
+        </form>
+
+        <div style="text-align:center; margin-top:16px; font-size:13px; color:var(--text-muted);">
+          Already have an account? <button type="button" class="text-link" onclick="toggleAuthMode('login')">Sign In</button>
+        </div>
+      </div>
+
+      <div id="loginBox" style="display:none;">
+        <h1 class="page-title">Welcome Back</h1>
+        <p class="page-subtitle">Sign in to access your multi-currency GlobalPay account.</p>
+
+        <form onsubmit="handleLogin(event)">
+          <div class="form-group">
+            <label class="form-label">Email Address</label>
+            <input type="email" id="loginEmail" class="form-control" placeholder="you@example.com" required />
+          </div>
+
+          <div class="form-group">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+              <label class="form-label" style="margin:0;">Password</label>
+              <button type="button" class="text-link" onclick="openModal('forgotPasswordModal')">Forgot Password?</button>
+            </div>
+            <input type="password" id="loginPassword" class="form-control" placeholder="Enter your password" required />
+          </div>
+
+          <button type="submit" class="btn-primary">Sign In</button>
+        </form>
+
+        <div style="text-align:center; margin-top:16px; font-size:13px; color:var(--text-muted);">
+          New to GlobalPay? <button type="button" class="text-link" onclick="toggleAuthMode('signup')">Create Account</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 2: 4-DIGIT ACCOUNT VERIFICATION -->
+    <section id="verifyView" class="app-view" style="text-align:center;">
+      <div style="width:52px; height:52px; border-radius:16px; background:rgba(16,185,129,0.16); color:#10b981; display:flex; align-items:center; justify-content:center; font-size:22px; margin:10px auto 14px;">
+        <i class="fa-solid fa-shield-check"></i>
+      </div>
+      <h1 class="page-title">Verify Your Account</h1>
+      <p class="page-subtitle">Enter the 4-digit verification code sent to your notification banner at the top of your screen.</p>
+
+      <div class="otp-grid" id="verifyOtpGrid">
+        <input type="tel" maxlength="1" inputmode="numeric" class="otp-box verify-digit" />
+        <input type="tel" maxlength="1" inputmode="numeric" class="otp-box verify-digit" />
+        <input type="tel" maxlength="1" inputmode="numeric" class="otp-box verify-digit" />
+        <input type="tel" maxlength="1" inputmode="numeric" class="otp-box verify-digit" />
+      </div>
+
+      <button type="button" class="btn-success" onclick="submitVerificationCode()">
+        Verify &amp; Continue
+      </button>
+
+      <div style="margin-top:16px;">
+        <button type="button" class="text-link" onclick="sendVerificationCode(true)">
+          <i class="fa-solid fa-rotate-right"></i> Resend 4-Digit Code
+        </button>
+      </div>
+    </section>
+
+    <!-- VIEW 3: COMPULSORY WITHDRAWAL PIN SETUP -->
+    <section id="pinSetupView" class="app-view" style="text-align:center;">
+      <div style="width:52px; height:52px; border-radius:16px; background:rgba(59,130,246,0.16); color:#60a5fa; display:flex; align-items:center; justify-content:center; font-size:22px; margin:10px auto 14px;">
+        <i class="fa-solid fa-key"></i>
+      </div>
+      <h1 class="page-title">Set Withdrawal PIN</h1>
+      <p class="page-subtitle">Create a compulsory 4-digit security PIN required to authorize transfers and withdrawals.</p>
+
+      <div class="otp-grid" id="pinOtpGrid">
+        <input type="tel" maxlength="1" inputmode="numeric" class="otp-box pin-digit" />
+        <input type="tel" maxlength="1" inputmode="numeric" class="otp-box pin-digit" />
+        <input type="tel" maxlength="1" inputmode="numeric" class="otp-box pin-digit" />
+        <input type="tel" maxlength="1" inputmode="numeric" class="otp-box pin-digit" />
+      </div>
+
+      <button type="button" class="btn-primary" onclick="completePinSetup()">
+        Complete Setup &amp; Open Wallet
+      </button>
+    </section>
+
+    <!-- VIEW 4: USER DASHBOARD -->
+    <section id="dashboardView" class="app-view">
+      <div class="balance-hero">
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+          <span style="font-size:12px; color:#cbd5e1; font-weight:600;" id="dashGreeting">Welcome</span>
+          <span class="wallet-id-chip" onclick="copyText(currentUser.walletId, 'Wallet ID copied!')">
+            <i class="fa-solid fa-fingerprint"></i>
+            <span id="dashWalletId">WLT-000000</span>
+            <i class="fa-regular fa-copy"></i>
+          </span>
+        </div>
+
+        <div class="primary-balance-amount" id="dashPrimaryBalance">$0.00</div>
+        <div class="usd-equivalent-line" id="dashUsdEquivalent">≈ $0.00 USD Equivalent</div>
+
+        <div class="action-grid">
+          <button type="button" class="action-btn" onclick="openModal('sendModal')">
+            <i class="fa-solid fa-paper-plane"></i>
+            <span>Send</span>
+          </button>
+          <button type="button" class="action-btn" onclick="openWithdrawEntry()">
+            <i class="fa-solid fa-building-columns"></i>
+            <span>Withdraw</span>
+          </button>
+          <button type="button" class="action-btn" onclick="openModal('requestModal')">
+            <i class="fa-solid fa-hand-holding-dollar"></i>
+            <span>Request</span>
+          </button>
+          <button type="button" class="action-btn" onclick="openReceiveModal()">
+            <i class="fa-solid fa-qrcode"></i>
+            <span>Receive</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Active Withdrawal Progress Tracker (Shown when user has a withdrawal in progress) -->
+      <div id="activeWithdrawalBanner" class="withdrawal-status-card" style="display:none;"></div>
+
+      <!-- Multi-Currency Fiat Wallets (User Country First, then USD, EUR, GBP) -->
+      <div class="section-header">
+        <span>Your Currency Wallets</span>
+        <button type="button" class="text-link" onclick="simulateIncomingUsd()">+ Simulate Incoming USD</button>
+      </div>
+      <div id="fiatWalletsList"></div>
+
+      <!-- Transaction History -->
+      <div class="section-header">
+        <span>Transaction History</span>
+        <span style="font-size:11px; color:var(--text-muted);" id="txCountLabel">0 records</span>
+      </div>
+      <div id="transactionHistoryList"></div>
+    </section>
+  </div>
+
+  <!-- MODAL 1: FORGOT PASSWORD -->
+  <div id="forgotPasswordModal" class="app-modal">
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <span class="modal-title">Reset Password</span>
+        <button class="close-btn" onclick="closeModal('forgotPasswordModal')"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <p style="font-size:13px; color:var(--text-muted); margin-bottom:14px;">Enter your registered email address and choose a new password.</p>
+      <form onsubmit="handlePasswordReset(event)">
+        <div class="form-group">
+          <label class="form-label">Registered Email</label>
+          <input type="email" id="resetEmail" class="form-control" placeholder="you@example.com" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label">New Password</label>
+          <input type="password" id="resetNewPass" class="form-control" placeholder="Minimum 6 characters" minlength="6" required />
+        </div>
+        <button type="submit" class="btn-primary">Update Password</button>
+      </form>
     </div>
+  </div>
 
-    <div id="app-shell">
+  <!-- MODAL 2: RECEIVE (Wallet ID, Bitcoin, Ethereum) -->
+  <div id="receiveModal" class="app-modal">
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <span class="modal-title">Receive Funds</span>
+        <button class="close-btn" onclick="closeModal('receiveModal')"><i class="fa-solid fa-xmark"></i></button>
+      </div>
 
-        <!-- PERSISTENT COMPACT TOP HEADER BAR (NO CLIPPING ON 360px+ SCREENS) -->
-        <header class="w-full px-4 py-3 bg-slate-950/90 border-b border-slate-800/90 flex items-center justify-between gap-2 sticky top-0 z-40 backdrop-blur-md">
-            <div class="flex items-center gap-2 min-w-0">
-                <div class="w-8 h-8 rounded-xl bg-blue-600 flex items-center justify-center shrink-0 shadow-md shadow-blue-600/30">
-                    <i class="fa-solid fa-wallet text-white text-xs"></i>
-                </div>
-                <span class="font-bold text-sm text-white tracking-tight truncate">GlobalPay</span>
-            </div>
+      <div class="toggle-bar">
+        <button type="button" class="toggle-tab active" id="tabWalletId" onclick="switchReceiveTab('wallet')">Wallet ID</button>
+        <button type="button" class="toggle-tab" id="tabBtc" onclick="switchReceiveTab('btc')">Bitcoin (BTC)</button>
+        <button type="button" class="toggle-tab" id="tabEth" onclick="switchReceiveTab('eth')">Ethereum (ETH)</button>
+      </div>
 
-            <div class="flex items-center gap-1.5 shrink-0">
-                <button type="button" id="header-admin-btn" onclick="openModal('modal-admin')" class="hidden px-2.5 py-1.5 rounded-lg bg-amber-500/15 border border-amber-500/35 text-amber-300 text-[11px] font-semibold hover:bg-amber-500/25 transition flex items-center gap-1 shrink-0">
-                    <i class="fa-solid fa-user-shield text-[10px]"></i>
-                    <span>Admin</span>
-                </button>
-                <button type="button" onclick="openModal('modal-support')" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-100 text-[11px] font-semibold transition flex items-center gap-1.5 shrink-0">
-                    <i class="fa-solid fa-headset text-blue-400 text-xs"></i>
-                    <span>Support</span>
-                </button>
-            </div>
-        </header>
+      <div id="receiveWalletPanel">
+        <p style="font-size:12.5px; color:var(--text-muted);">Share your unique GlobalPay Wallet ID to receive instant transfers from other users.</p>
+        <div class="address-box">
+          <span class="address-text" id="recWalletIdVal">WLT-000000</span>
+          <button type="button" class="copy-mini-btn" onclick="copyText(currentUser.walletId, 'Wallet ID copied!')">Copy</button>
+        </div>
+      </div>
 
-        <!-- ==================== VIEW 1: SIGN UP (DEFAULT ACTIVE) ==================== -->
-        <main id="view-signup" class="app-view active">
-            <div class="text-center mt-2 mb-6">
-                <h1 class="text-2xl font-extrabold text-white tracking-tight">Create Your Account</h1>
-                <p class="text-slate-400 text-xs mt-1.5 leading-relaxed">Select your country to configure your local &amp; global wallets</p>
-            </div>
+      <div id="receiveBtcPanel" style="display:none;">
+        <p style="font-size:12.5px; color:var(--text-muted);">Send only Bitcoin (BTC) to this settlement address. Incoming deposits convert automatically to your wallet.</p>
+        <div class="address-box">
+          <span class="address-text" id="recBtcAddrVal"></span>
+          <button type="button" class="copy-mini-btn" onclick="copyText(appConfig.btcAddress, 'BTC address copied!')">Copy</button>
+        </div>
+      </div>
 
-            <div class="space-y-3.5">
-                <div>
-                    <label class="block text-xs font-medium text-slate-300 mb-1">Full Name</label>
-                    <input type="text" id="signup-name" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-3 text-sm text-white focus:outline-none focus:border-blue-500" placeholder="e.g. Chinedu Okafor">
-                </div>
+      <div id="receiveEthPanel" style="display:none;">
+        <p style="font-size:12.5px; color:var(--text-muted);">Send only Ethereum (ETH - ERC20) to this settlement address.</p>
+        <div class="address-box">
+          <span class="address-text" id="recEthAddrVal"></span>
+          <button type="button" class="copy-mini-btn" onclick="copyText(appConfig.ethAddress, 'ETH address copied!')">Copy</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
-                <div>
-                    <label class="block text-xs font-medium text-slate-300 mb-1">Email Address</label>
-                    <input type="email" id="signup-email" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-3 text-sm text-white focus:outline-none focus:border-blue-500" placeholder="you@example.com">
-                </div>
+  <!-- MODAL 3: SEND FUNDS -->
+  <div id="sendModal" class="app-modal">
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <span class="modal-title">Send Money</span>
+        <button class="close-btn" onclick="closeModal('sendModal')"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <form onsubmit="handleSendFunds(event)">
+        <div class="form-group">
+          <label class="form-label">Recipient Wallet ID or Email</label>
+          <input type="text" id="sendRecipient" class="form-control" placeholder="e.g. WLT-839201" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Amount (USD)</label>
+          <input type="number" id="sendAmountUsd" class="form-control" placeholder="0.00" step="0.01" min="1" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label">4-Digit Withdrawal PIN</label>
+          <input type="password" id="sendPin" class="form-control" maxlength="4" inputmode="numeric" placeholder="••••" required />
+        </div>
+        <button type="submit" class="btn-primary">Send Now</button>
+      </form>
+    </div>
+  </div>
 
-                <div>
-                    <label class="block text-xs font-medium text-slate-300 mb-1">Country (Sets Home Currency)</label>
-                    <div class="relative">
-                        <select id="signup-country" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-3 pr-9 text-sm text-white focus:outline-none focus:border-blue-500 appearance-none">
-                            <option value="" disabled selected>Select from all world countries...</option>
-                        </select>
-                        <i class="fa-solid fa-chevron-down absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i>
-                    </div>
-                </div>
+  <!-- MODAL 4: REQUEST PAYMENT -->
+  <div id="requestModal" class="app-modal">
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <span class="modal-title">Request Payment</span>
+        <button class="close-btn" onclick="closeModal('requestModal')"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <form onsubmit="handleRequestPayment(event)">
+        <div class="form-group">
+          <label class="form-label">Payer Name or Email</label>
+          <input type="text" id="reqFromName" class="form-control" placeholder="e.g. Sarah Jenkins" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Amount to Request (USD)</label>
+          <input type="number" id="reqAmountUsd" class="form-control" placeholder="100.00" step="0.01" min="1" required />
+        </div>
+        <button type="submit" class="btn-primary">Generate Request Link</button>
+      </form>
+      <div id="requestLinkResult" style="display:none; margin-top:14px;">
+        <div class="address-box">
+          <span class="address-text" id="generatedReqLink"></span>
+          <button type="button" class="copy-mini-btn" onclick="copyText(document.getElementById('generatedReqLink').textContent, 'Request link copied!')">Copy</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
-                <div>
-                    <div class="flex items-center justify-between mb-1">
-                        <label class="block text-xs font-medium text-slate-300">Password</label>
-                        <button type="button" onclick="showView('view-forgot')" class="text-xs text-blue-400 hover:text-blue-300 font-medium">Forgot Password?</button>
-                    </div>
-                    <input type="password" id="signup-password" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-3 text-sm text-white focus:outline-none focus:border-blue-500" placeholder="Create a strong password">
-                </div>
+  <!-- MODAL 5: WITHDRAW FUNDS (Form First -> Required Step Pop-up) -->
+  <div id="withdrawModal" class="app-modal">
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <span class="modal-title" id="withdrawModalTitle">Withdraw Funds</span>
+        <button class="close-btn" onclick="closeModal('withdrawModal')"><i class="fa-solid fa-xmark"></i></button>
+      </div>
 
-                <label class="flex items-start gap-2.5 pt-1 cursor-pointer">
-                    <input type="checkbox" id="signup-terms" class="mt-0.5 w-4 h-4 rounded bg-slate-900 border-slate-700 text-blue-600 shrink-0">
-                    <span class="text-xs text-slate-400 leading-relaxed">
-                        I agree to the <span class="text-blue-400 underline">Terms &amp; Conditions</span> and Multi-Currency Wallet Policy.
-                    </span>
-                </label>
+      <!-- STEP A: Withdrawal Details Form -->
+      <form id="withdrawDetailsForm" onsubmit="submitWithdrawalDetails(event)">
+        <div class="form-group">
+          <label class="form-label">Withdrawal Amount (USD)</label>
+          <input type="number" id="wdAmountUsd" class="form-control" placeholder="Enter amount e.g. 500" step="0.01" min="10" required />
+        </div>
 
-                <button type="button" onclick="handleSignup()" class="w-full bg-blue-600 hover:bg-blue-500 active:scale-[0.99] text-white font-semibold py-3.5 rounded-xl text-sm transition shadow-lg shadow-blue-600/25 mt-2">
-                    Create Account
-                </button>
-            </div>
+        <div class="form-group">
+          <label class="form-label">Payout Destination Method</label>
+          <select id="wdMethod" class="form-control" onchange="updateWithdrawDestinationFields()" required>
+            <option value="Bank Transfer">Bank Transfer (Chase, BofA, Wells Fargo, Barclays, etc.)</option>
+            <option value="CashApp">CashApp ($Cashtag)</option>
+            <option value="PayPal">PayPal</option>
+            <option value="Revolut">Revolut</option>
+            <option value="Venmo">Venmo</option>
+          </select>
+        </div>
 
-            <div class="mt-6 pt-4 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
-                <span>Already have an account?</span>
-                <button type="button" onclick="showView('view-login')" class="text-blue-400 font-semibold hover:text-blue-300">Sign In →</button>
-            </div>
-        </main>
+        <div id="wdBankSelectGroup" class="form-group">
+          <label class="form-label">Select Bank</label>
+          <select id="wdBankName" class="form-control">
+            <option value="Chase Bank">Chase Bank</option>
+            <option value="Bank of America">Bank of America</option>
+            <option value="Wells Fargo">Wells Fargo</option>
+            <option value="Citibank">Citibank</option>
+            <option value="Capital One">Capital One</option>
+            <option value="Barclays UK">Barclays UK</option>
+            <option value="HSBC">HSBC</option>
+            <option value="Lloyds Bank">Lloyds Bank</option>
+            <option value="Monzo">Monzo</option>
+            <option value="GTBank">GTBank</option>
+            <option value="Access Bank">Access Bank</option>
+            <option value="Zenith Bank">Zenith Bank</option>
+            <option value="Other International Bank">Other International Bank</option>
+          </select>
+        </div>
 
-        <!-- ==================== VIEW 2: SIGN IN ==================== -->
-        <section id="view-login" class="app-view">
-            <div class="text-center mt-4 mb-6">
-                <div class="w-14 h-14 rounded-2xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center mx-auto mb-3">
-                    <i class="fa-solid fa-lock-open text-xl text-blue-400"></i>
-                </div>
-                <h1 class="text-2xl font-extrabold text-white">Welcome Back</h1>
-                <p class="text-slate-400 text-xs mt-1">Sign in to access your multi-currency wallet</p>
-            </div>
+        <div class="form-group">
+          <label class="form-label" id="wdAccountLabel">Account Number / IBAN &amp; Routing</label>
+          <input type="text" id="wdAccountTarget" class="form-control" placeholder="Enter account number or IBAN" required />
+        </div>
 
-            <div class="space-y-4">
-                <div>
-                    <label class="block text-xs font-medium text-slate-300 mb-1">Email Address</label>
-                    <input type="email" id="login-email" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-3 text-sm text-white focus:outline-none focus:border-blue-500" placeholder="you@example.com">
-                </div>
+        <div class="form-group">
+          <label class="form-label">Account Holder Name</label>
+          <input type="text" id="wdHolderName" class="form-control" placeholder="Full legal name on account" required />
+        </div>
 
-                <div>
-                    <div class="flex items-center justify-between mb-1">
-                        <label class="block text-xs font-medium text-slate-300">Password</label>
-                        <button type="button" onclick="showView('view-forgot')" class="text-xs text-blue-400 hover:text-blue-300 font-medium">Forgot Password?</button>
-                    </div>
-                    <input type="password" id="login-password" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-3 text-sm text-white focus:outline-none focus:border-blue-500" placeholder="Enter your password">
-                </div>
+        <div class="form-group">
+          <label class="form-label">4-Digit Withdrawal PIN</label>
+          <input type="password" id="wdConfirmPin" class="form-control" maxlength="4" inputmode="numeric" placeholder="••••" required />
+        </div>
 
-                <button type="button" onclick="handleLogin()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold py-3.5 rounded-xl text-sm transition shadow-lg shadow-blue-600/25">
-                    Sign In
-                </button>
-            </div>
+        <button type="submit" class="btn-primary">
+          Proceed to Withdraw <i class="fa-solid fa-arrow-right"></i>
+        </button>
+      </form>
 
-            <p class="text-center text-xs text-slate-400 mt-6">
-                Don't have an account? <button type="button" onclick="showView('view-signup')" class="text-blue-400 font-semibold">Create Account</button>
-            </p>
-        </section>
+      <!-- STEP B: Required Action / Step Pop-up & Receipt Upload -->
+      <div id="withdrawActionStepView" style="display:none;"></div>
+    </div>
+  </div>
 
-        <!-- ==================== VIEW 3: FORGOT PASSWORD RESET ==================== -->
-        <section id="view-forgot" class="app-view">
-            <div class="text-center mt-4 mb-6">
-                <div class="w-14 h-14 rounded-2xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center mx-auto mb-3">
-                    <i class="fa-solid fa-key text-xl text-amber-400"></i>
-                </div>
-                <h1 class="text-2xl font-extrabold text-white">Reset Password</h1>
-                <p class="text-slate-400 text-xs mt-1 leading-relaxed">Enter your registered email address to receive a password recovery link.</p>
-            </div>
+  <!-- MODAL 6: SUPPORT -->
+  <div id="supportModal" class="app-modal">
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <span class="modal-title">24/7 Live Support</span>
+        <button class="close-btn" onclick="closeModal('supportModal')"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div id="supportChatLog" style="max-height:220px; overflow-y:auto; background:var(--bg-input); border:1px solid var(--border); border-radius:12px; padding:12px; margin-bottom:12px; font-size:12.5px;">
+        <div style="margin-bottom:8px;"><strong style="color:#60a5fa;">Support Agent:</strong> Hello! How can we assist you with your wallet, transfer, or withdrawal appeal today?</div>
+      </div>
+      <form onsubmit="sendSupportMessage(event)">
+        <div class="form-group">
+          <input type="text" id="supportInput" class="form-control" placeholder="Describe your issue or request a fee appeal..." required />
+        </div>
+        <button type="submit" class="btn-primary">Send Message</button>
+      </form>
+    </div>
+  </div>
 
-            <div class="space-y-4">
-                <div>
-                    <label class="block text-xs font-medium text-slate-300 mb-1">Registered Email</label>
-                    <input type="email" id="forgot-email" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-3 text-sm text-white focus:outline-none focus:border-blue-500" placeholder="you@example.com">
-                </div>
+  <!-- MODAL 7: ADMIN CONTROL PANEL -->
+  <div id="adminModal" class="app-modal">
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <span class="modal-title">Admin Control Center</span>
+        <button class="close-btn" onclick="closeModal('adminModal')"><i class="fa-solid fa-xmark"></i></button>
+      </div>
 
-                <button type="button" onclick="handleForgotPassword()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold py-3.5 rounded-xl text-sm transition">
-                    Send Reset Link
-                </button>
+      <!-- 1. Pending Withdrawal Review & Live Price Appeal Override -->
+      <div class="admin-card">
+        <div style="font-size:13px; font-weight:800; color:#fbbf24; margin-bottom:8px;">
+          <i class="fa-solid fa-clock-rotate-left"></i> Pending User Withdrawal &amp; Fee Appeal
+        </div>
+        <div id="adminPendingReviewBox" style="font-size:12.5px; color:var(--text-muted);">
+          No active user withdrawal right now.
+        </div>
+      </div>
 
-                <button type="button" onclick="showView('view-signup')" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold py-3 rounded-xl text-xs transition">
-                    ← Back to Sign Up
-                </button>
-            </div>
-        </section>
+      <!-- 2. Receive Crypto Wallet Addresses -->
+      <div class="admin-card">
+        <div style="font-size:13px; font-weight:800; color:#60a5fa; margin-bottom:8px;">
+          <i class="fa-brands fa-bitcoin"></i> Receive Button Crypto Addresses
+        </div>
+        <div class="form-group">
+          <label class="form-label">Bitcoin (BTC) Receive Address</label>
+          <input type="text" id="adminBtcInput" class="form-control" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Ethereum (ETH) Receive Address</label>
+          <input type="text" id="adminEthInput" class="form-control" />
+        </div>
+        <button type="button" class="btn-secondary" onclick="saveCryptoAddresses()">Save Crypto Addresses</button>
+      </div>
 
-        <!-- ==================== VIEW 4: 4-DIGIT SCREEN VERIFICATION ==================== -->
-        <section id="view-verify" class="app-view">
-            <div class="text-center mt-3 mb-6">
-                <div class="w-14 h-14 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center mx-auto mb-3">
-                    <i class="fa-solid fa-shield-halved text-2xl text-emerald-400"></i>
-                </div>
-                <h1 class="text-xl font-extrabold text-white">Verify Your Account</h1>
-                <p class="text-slate-400 text-xs mt-1.5 leading-relaxed max-w-xs mx-auto">
-                    Check the top pop-up notification for your 4-digit code and enter it below.
-                </p>
-            </div>
+      <!-- 3. Withdrawal Steps Manager (Add, Edit Price/Text, Post-Approval Status & Timer) -->
+      <div class="admin-card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+          <span style="font-size:13px; font-weight:800; color:#34d399;">
+            <i class="fa-solid fa-list-check"></i> Withdrawal Steps &amp; Status Timers
+          </span>
+          <button type="button" class="copy-mini-btn" onclick="addNewWithdrawalStep()">+ Add Step</button>
+        </div>
+        <div id="adminStepsEditor"></div>
+      </div>
+    </div>
+  </div>
 
-            <!-- Clean, Full-Width 4-Digit Input Row (No Permanent Code Card) -->
-            <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 mb-6">
-                <label class="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 text-center mb-3">
-                    Enter 4-Digit Verification Code
-                </label>
-                <div class="otp-grid" id="verify-otp-grid">
-                    <input type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="1" aria-label="Verification digit 1" class="v-digit otp-box" oninput="advanceDigit(this, '.v-digit', 0)" onkeydown="handleDigitKeydown(event, '.v-digit', 0)" onpaste="handleDigitPaste(event, '.v-digit')">
-                    <input type="text" inputmode="numeric" maxlength="1" aria-label="Verification digit 2" class="v-digit otp-box" oninput="advanceDigit(this, '.v-digit', 1)" onkeydown="handleDigitKeydown(event, '.v-digit', 1)" onpaste="handleDigitPaste(event, '.v-digit')">
-                    <input type="text" inputmode="numeric" maxlength="1" aria-label="Verification digit 3" class="v-digit otp-box" oninput="advanceDigit(this, '.v-digit', 2)" onkeydown="handleDigitKeydown(event, '.v-digit', 2)" onpaste="handleDigitPaste(event, '.v-digit')">
-                    <input type="text" inputmode="numeric" maxlength="1" aria-label="Verification digit 4" class="v-digit otp-box" oninput="advanceDigit(this, '.v-digit', 3)" onkeydown="handleDigitKeydown(event, '.v-digit', 3)" onpaste="handleDigitPaste(event, '.v-digit')">
-                </div>
-            </div>
+  <script>
+    // Complete World Countries List with Currency Code, Symbol & Rate per 1 USD
+    const WORLD_COUNTRIES = [
+      { name: "United States", code: "USD", symbol: "$", rate: 1.00 },
+      { name: "United Kingdom", code: "GBP", symbol: "£", rate: 0.79 },
+      { name: "European Union (Eurozone)", code: "EUR", symbol: "€", rate: 0.92 },
+      { name: "Nigeria", code: "NGN", symbol: "₦", rate: 1580.00 },
+      { name: "Canada", code: "CAD", symbol: "C$", rate: 1.38 },
+      { name: "Australia", code: "AUD", symbol: "A$", rate: 1.52 },
+      { name: "Afghanistan", code: "AFN", symbol: "؋", rate: 70.50 },
+      { name: "Albania", code: "ALL", symbol: "L", rate: 92.40 },
+      { name: "Algeria", code: "DZD", symbol: "د.ج", rate: 134.50 },
+      { name: "Andorra", code: "EUR", symbol: "€", rate: 0.92 },
+      { name: "Angola", code: "AOA", symbol: "Kz", rate: 912.00 },
+      { name: "Antigua and Barbuda", code: "XCD", symbol: "EC$", rate: 2.70 },
+      { name: "Argentina", code: "ARS", symbol: "$", rate: 985.00 },
+      { name: "Armenia", code: "AMD", symbol: "֏", rate: 387.00 },
+      { name: "Austria", code: "EUR", symbol: "€", rate: 0.92 },
+      { name: "Azerbaijan", code: "AZN", symbol: "₼", rate: 1.70 },
+      { name: "Bahamas", code: "BSD", symbol: "$", rate: 1.00 },
+      { name: "Bahrain", code: "BHD", symbol: ".د.ب", rate: 0.376 },
+      { name: "Bangladesh", code: "BDT", symbol: "৳", rate: 119.50 },
+      { name: "Barbados", code: "BBD", symbol: "$", rate: 2.00 },
+      { name: "Belarus", code: "BYN", symbol: "Br", rate: 3.27 },
+      { name: "Belgium", code: "EUR", symbol: "€", rate: 0.92 },
+      { name: "Belize", code: "BZD", symbol: "BZ$", rate: 2.00 },
+      { name: "Benin", code: "XOF", symbol: "CFA", rate: 604.00 },
+      { name: "Bhutan", code: "BTN", symbol: "Nu.", rate: 84.10 },
+      { name: "Bolivia", code: "BOB", symbol: "Bs.", rate: 6.91 },
+      { name: "Bosnia and Herzegovina", code: "BAM", symbol: "KM", rate: 1.80 },
+      { name: "Botswana", code: "BWP", symbol: "P", rate: 13.45 },
+      { name: "Brazil", code: "BRL", symbol: "R$", rate: 5.65 },
+      { name: "Brunei", code: "BND", symbol: "B$", rate: 1.34 },
+      { name: "Bulgaria", code: "BGN", symbol: "лв", rate: 1.80 },
+      { name: "Burkina Faso", code: "XOF", symbol: "CFA", rate: 604.00 },
+      { name: "Burundi", code: "BIF", symbol: "FBu", rate: 2890.00 },
+      { name: "Cabo Verde", code: "CVE", symbol: "$", rate: 101.50 },
+      { name: "Cambodia", code: "KHR", symbol: "៛", rate: 4065.00 },
+      { name: "Cameroon", code: "XAF", symbol: "FCFA", rate: 604.00 },
+      { name: "Central African Republic", code: "XAF", symbol: "FCFA", rate: 604.00 },
+      { name: "Chad", code: "XAF", symbol: "FCFA", rate: 604.00 },
+      { name: "Chile", code: "CLP", symbol: "$", rate: 950.00 },
+      { name: "China", code: "CNY", symbol: "¥", rate: 7.14 },
+      { name: "Colombia", code: "COP", symbol: "$", rate: 4280.00 },
+      { name: "Comoros", code: "KMF", symbol: "CF", rate: 453.00 },
+      { name: "Congo (DRC)", code: "CDF", symbol: "FC", rate: 2840.00 },
+      { name: "Congo (Republic)", code: "XAF", symbol: "FCFA", rate: 604.00 },
+      { name: "Costa Rica", code: "CRC", symbol: "₡", rate: 514.00 },
+      { name: "Croatia", code: "EUR", symbol: "€", rate: 0.92 },
+      { name: "Cuba", code: "CUP", symbol: "$", rate: 24.00 },
+      { name: "Cyprus", code: "EUR", symbol: "€", rate: 0.92 },
+      { name: "Czech Republic", code: "CZK", symbol: "Kč", rate: 23.30 },
+      { name: "Denmark", code: "DKK", symbol: "kr", rate: 6.86 },
+      { name: "Djibouti", code: "DJF", symbol: "Fdj", rate: 177.70 },
+      { name: "Dominica", code: "XCD", symbol: "EC$", rate: 2.70 },
+      { name: "Dominican Republic", code: "DOP", symbol: "RD$", rate: 60.10 },
+      { name: "Ecuador", code: "USD", symbol: "$", rate: 1.00 },
+      { name: "Egypt", code: "EGP", symbol: "E£", rate: 49.20 },
+      { name: "El Salvador", code: "USD", symbol: "$", rate: 1.00 },
+      { name: "Equatorial Guinea", code: "XAF", symbol: "FCFA", rate: 604.00 },
+      { name: "Eritrea", code: "ERN", symbol: "Nfk", rate: 15.00 },
+      { name: "Estonia", code: "EUR", symbol: "€", rate: 0.92 },
+      { name: "Eswatini", code: "SZL", symbol: "E", rate: 17.65 },
+      { name: "Ethiopia", code: "ETB", symbol: "Br", rate: 121.00 },
+      { name: "Fiji", code: "FJD", symbol: "FJ$", rate: 2.24 },
+      { name: "Finland", code: "EUR", symbol: "€", rate: 0.92 },
+      { name: "France", code: "EUR", symbol: "€", rate: 0.92 },
+      { name: "Gabon", code: "XAF", symbol: "FCFA", rate: 604.00 },
+      { name: "Gambia", code: "GMD", symbol: "D", rate: 70.50 },
+      { name: "Georgia", code: "GEL", symbol: "₾", rate: 2.72 },
+      { name: "Germany", code: "EUR", symbol: "€", rate: 0.92 },
+      { name: "Ghana", code: "GHS", symbol: "₵", rate: 15.90 },
+      { name: "Greece", code: "EUR", symbol: "€", rate: 0.92 },
+      { name: "Grenada", code: "XCD", symbol: "EC$", rate: 2.70 },
+      { name: "Guatemala", code: "GTQ", symbol: "Q", rate: 7.73 },
+      { name: "Guinea", code: "GNF", symbol: "FG", rate: 8620.00 },
+      { name: "Guinea-Bissau", code: "XOF", symbol: "CFA", rate: 604.00 },
+      { name: "Guyana", code: "GYD", symbol: "G$", rate: 209.00 },
+      { name: "Haiti", code: "HTG", symbol: "G", rate: 131.50 },
+      { name: "Honduras", code: "HNL", symbol: "L", rate: 25.10 },
+      { name: "Hong Kong", code: "HKD", symbol: "HK$", rate: 7.78 },
+      { name: "Hungary", code: "HUF", symbol: "Ft", rate: 372.00 },
+      { name: "Iceland", code: "ISK", symbol: "kr", rate: 137.50 },
+      { name: "India", code: "INR", symbol: "₹", rate: 84.10 },
+      { name: "Indonesia", code: "IDR", symbol: "Rp", rate: 15680.00 },
+      { name: "Iran", code: "IRR", symbol: "﷼", rate: 42000.00 },
+      { name: "Iraq", code: "IQD", symbol: "ع.د", rate: 1310.00 },
+      { name: "Ireland", code: "EUR", symbol: "€", rate: 0.92 },
+      { name: "Israel", code: "ILS", symbol: "₪", rate: 3.72 },
+      { name: "Italy", code: "EUR", symbol: "€", rate: 0.92 },
+      { name: "Ivory Coast", code: "XOF", symbol: "CFA", rate: 604.00 },
+      { name: "Jamaica", code: "JMD", symbol: "J$", rate: 158.00 },
+      { name: "Japan", code: "JPY", symbol: "¥", rate: 152.00 },
+      { name: "Jordan", code: "JOD", symbol: "JD", rate: 0.709 },
+      { name: "Kazakhstan", code: "KZT", symbol: "₸", rate: 488.00 },
+      { name: "Kenya", code: "KES", symbol: "KSh", rate: 129.00 },
+      { name: "Kiribati", code: "AUD", symbol: "A$", rate: 1.52 },
+      { name: "Kuwait", code: "KWD", symbol: "KD", rate: 0.306 },
+      { name: "Kyrgyzstan", code: "KGS", symbol: "с", rate: 86.20 },
+      { name: "Laos", code: "LAK", symbol: "₭", rate: 21900.00 },
+      { name: "Latvia", code: "EUR", symbol: "€", rate: 0.92 },
+      { name: "Lebanon", code: "LBP", symbol: "ل.ل", rate: 89500.00 },
+      { name: "Lesotho", code: "LSL", symbol: "L", rate: 17.65 },
+      { name: "Liberia", code: "LRD", symbol: "L$", rate: 192.00 },
+      { name: "Libya", code: "LYD", symbol: "LD", rate: 4.82 },
+      { name: "Liechtenstein", code: "CHF", symbol: "CHF", rate: 0.87 },
+      { name: "Lithuania", code: "EUR", symbol: "€", rate: 0.92 },
+      { name: "Luxembourg", code: "EUR", symbol: "€", rate: 0.92 },
+      { name: "Madagascar", code: "MGA", symbol: "Ar", rate: 4610.00 },
+      { name: "Malawi", code: "MWK", symbol: "MK", rate: 1734.00 },
+      { name: "Malaysia", code: "MYR", symbol: "RM", rate: 4.35 },
+      { name: "Maldives", code: "MVR", symbol: "Rf", rate: 15.40 },
+      { name: "Mali", code: "XOF", symbol: "CFA", rate: 604.00 },
+      { name: "Malta", code: "EUR", symbol: "€", rate: 0.92 },
+      { name: "Marshall Islands", code: "USD", symbol: "$", rate: 1.00 },
+      { name: "Mauritania", code: "MRU", symbol: "UM", rate: 39.70 },
+      { name: "Mauritius", code: "MUR", symbol: "₨", rate: 46.20 },
+      { name: "Mexico", code: "MXN", symbol: "$", rate: 19.95 },
+      { name: "Micronesia", code: "USD", symbol: "$", rate: 1.00 },
+      { name: "Moldova", code: "MDL", symbol: "L", rate: 17.85 },
+      { name: "Monaco", code: "EUR", symbol: "€", rate: 0.92 },
+      { name: "Mongolia", code: "MNT", symbol: "₮", rate: 3398.00 },
+      { name: "Montenegro", code: "EUR", symbol: "€", rate: 0.92 },
+      { name: "Morocco", code: "MAD", symbol: "MAD", rate: 9.85 },
+      { name: "Mozambique", code: "MZN", symbol: "MT", rate: 63.90 },
+      { name: "Myanmar", code: "MMK", symbol: "K", rate: 2100.00 },
+      { name: "Namibia", code: "NAD", symbol: "N$", rate: 17.65 },
+      { name: "Nauru", code: "AUD", symbol: "A$", rate: 1.52 },
+      { name: "Nepal", code: "NPR", symbol: "₨", rate: 134.50 },
+      { name: "Netherlands", code: "EUR", symbol: "€", rate: 0.92 },
+      { name: "New Zealand", code: "NZD", symbol: "NZ$", rate: 1.66 },
+      { name: "Nicaragua", code: "NIO", symbol: "C$", rate: 36.80 },
+      { name: "Niger", code: "XOF", symbol: "CFA", rate: 604.00 },
+      { name: "North Korea", code: "KPW", symbol: "₩", rate: 900.00 },
+      { name: "North Macedonia", code: "MKD", symbol: "ден", rate: 56.60 },
+      { name: "Norway", code: "NOK", symbol: "kr", rate: 10.95 },
+      { name: "Oman", code: "OMR", symbol: "ر.ع.", rate: 0.385 },
+      { name: "Pakistan", code: "PKR", symbol: "₨", rate: 277.80 },
+      { name: "Palau", code: "USD", symbol: "$", rate: 1.00 },
+      { name: "Palestine", code: "ILS", symbol: "₪", rate: 3.72 },
+      { name: "Panama", code: "PAB", symbol: "B/.", rate: 1.00 },
+      { name: "Papua New Guinea", code: "PGK", symbol: "K", rate: 3.95 },
+      { name: "Paraguay", code: "PYG", symbol: "₲", rate: 7780.00 },
+      { name: "Peru", code: "PEN", symbol: "S/", rate: 3.76 },
+      { name: "Philippines", code: "PHP", symbol: "₱", rate: 58.20 },
+      { name: "Poland", code: "PLN", symbol: "zł", rate: 4.01 },
+      { name: "Portugal", code: "EUR", symbol: "€", rate: 0.92 },
+      { name: "Qatar", code: "QAR", symbol: "ر.ق", rate: 3.64 },
+      { name: "Romania", code: "RON", symbol: "lei", rate: 4.58 },
+      { name: "Russia", code: "RUB", symbol: "₽", rate: 96.50 },
+      { name: "Rwanda", code: "RWF", symbol: "FRw", rate: 1365.00 },
+      { name: "Saint Kitts and Nevis", code: "XCD", symbol: "EC$", rate: 2.70 },
+      { name: "Saint Lucia", code: "XCD", symbol: "EC$", rate: 2.70 },
+      { name: "Saint Vincent and the Grenadines", code: "XCD", symbol: "EC$", rate: 2.70 },
+      { name: "Samoa", code: "WST", symbol: "WS$", rate: 2.75 },
+      { name: "San Marino", code: "EUR", symbol: "€", rate: 0.92 },
+      { name: "Sao Tome and Principe", code: "STN", symbol: "Db", rate: 22.60 },
+      { name: "Saudi Arabia", code: "SAR", symbol: "﷼", rate: 3.75 },
+      { name: "Senegal", code: "XOF", symbol: "CFA", rate: 604.00 },
+      { name: "Serbia", code: "RSD", symbol: "дин.", rate: 107.80 },
+      { name: "Seychelles", code: "SCR", symbol: "₨", rate: 13.70 },
+      { name: "Sierra Leone", code: "SLE", symbol: "Le", rate: 22.60 },
+      { name: "Singapore", code: "SGD", symbol: "S$", rate: 1.34 },
+      { name: "Slovakia", code: "EUR", symbol: "€", rate: 0.92 },
+      { name: "Slovenia", code: "EUR", symbol: "€", rate: 0.92 },
+      { name: "Solomon Islands", code: "SBD", symbol: "SI$", rate: 8.35 },
+      { name: "Somalia", code: "SOS", symbol: "Sh", rate: 571.00 },
+      { name: "South Africa", code: "ZAR", symbol: "R", rate: 17.65 },
+      { name: "South Korea", code: "KRW", symbol: "₩", rate: 1380.00 },
+      { name: "South Sudan", code: "SSP", symbol: "£", rate: 3250.00 },
+      { name: "Spain", code: "EUR", symbol: "€", rate: 0.92 },
+      { name: "Sri Lanka", code: "LKR", symbol: "Rs", rate: 293.00 },
+      { name: "Sudan", code: "SDG", symbol: "ج.س.", rate: 601.00 },
+      { name: "Suriname", code: "SRD", symbol: "$", rate: 34.80 },
+      { name: "Sweden", code: "SEK", symbol: "kr", rate: 10.65 },
+      { name: "Switzerland", code: "CHF", symbol: "CHF", rate: 0.87 },
+      { name: "Syria", code: "SYP", symbol: "£", rate: 13000.00 },
+      { name: "Taiwan", code: "TWD", symbol: "NT$", rate: 32.10 },
+      { name: "Tajikistan", code: "TJS", symbol: "SM", rate: 10.65 },
+      { name: "Tanzania", code: "TZS", symbol: "TSh", rate: 2690.00 },
+      { name: "Thailand", code: "THB", symbol: "฿", rate: 33.80 },
+      { name: "Timor-Leste", code: "USD", symbol: "$", rate: 1.00 },
+      { name: "Togo", code: "XOF", symbol: "CFA", rate: 604.00 },
+      { name: "Tonga", code: "TOP", symbol: "T$", rate: 2.35 },
+      { name: "Trinidad and Tobago", code: "TTD", symbol: "TT$", rate: 6.78 },
+      { name: "Tunisia", code: "TND", symbol: "د.ت", rate: 3.11 },
+      { name: "Turkey", code: "TRY", symbol: "₺", rate: 34.25 },
+      { name: "Turkmenistan", code: "TMT", symbol: "m", rate: 3.50 },
+      { name: "Tuvalu", code: "AUD", symbol: "A$", rate: 1.52 },
+      { name: "Uganda", code: "UGX", symbol: "USh", rate: 3670.00 },
+      { name: "Ukraine", code: "UAH", symbol: "₴", rate: 41.30 },
+      { name: "United Arab Emirates", code: "AED", symbol: "د.إ", rate: 3.67 },
+      { name: "Uruguay", code: "UYU", symbol: "$U", rate: 41.60 },
+      { name: "Uzbekistan", code: "UZS", symbol: "so'm", rate: 12780.00 },
+      { name: "Vanuatu", code: "VUV", symbol: "VT", rate: 119.50 },
+      { name: "Vatican City", code: "EUR", symbol: "€", rate: 0.92 },
+      { name: "Venezuela", code: "VES", symbol: "Bs.", rate: 42.50 },
+      { name: "Vietnam", code: "VND", symbol: "₫", rate: 25350.00 },
+      { name: "Yemen", code: "YER", symbol: "﷼", rate: 250.00 },
+      { name: "Zambia", code: "ZMW", symbol: "ZK", rate: 26.80 },
+      { name: "Zimbabwe", code: "ZWG", symbol: "ZiG", rate: 25.40 }
+    ];
 
-            <button type="button" onclick="handleVerifyCode()" class="w-full bg-emerald-600 hover:bg-emerald-500 active:scale-[0.99] text-white font-semibold py-3.5 rounded-xl text-sm transition shadow-lg shadow-emerald-600/20">
-                Verify &amp; Continue
-            </button>
+    const DEFAULT_CONFIG = {
+      btcAddress: "bc1qglobalpay9820settlement77x4v2",
+      ethAddress: "0x71C94A2298B01E54F902GlobalPayETH99",
+      steps: [
+        {
+          id: "step_1",
+          title: "Account Activation Charge",
+          description: "Required to activate external bank & mobile wallet payout routing for your Wallet ID.",
+          priceUsd: 50,
+          settlementAddress: "bc1qactivation8920globalpaywallet",
+          postApprovalStatus: "Activation Confirmed — Routing Liquidity Check...",
+          delayMinutes: 2
+        },
+        {
+          id: "step_2",
+          title: "Liquidity Pool Clearance Fee",
+          description: "Covers cross-border FX liquidity settlement prior to final bank wire release.",
+          priceUsd: 120,
+          settlementAddress: "bc1qliquidity7741globalpaywallet",
+          postApprovalStatus: "Liquidity Cleared — Finalizing Disbursement Queue...",
+          delayMinutes: 3
+        }
+      ]
+    };
 
-            <button type="button" onclick="resendVerifyCode()" class="w-full text-xs text-blue-400 hover:text-blue-300 font-semibold mt-4 py-2.5 rounded-xl hover:bg-slate-800/60 transition">
-                <i class="fa-solid fa-rotate-right mr-1"></i> Resend 4-Digit Code
-            </button>
-        </section>
+    let appConfig = JSON.parse(localStorage.getItem("gp_config_v3")) || structuredClone(DEFAULT_CONFIG);
+    let currentUser = JSON.parse(localStorage.getItem("gp_user_v3")) || null;
+    let pendingSignupData = null;
+    let currentOtpCode = "";
+    let uploadedReceiptDataUrl = "";
+    let statusCountdownInterval = null;
 
-        <!-- ==================== VIEW 5: COMPULSORY WITHDRAWAL PIN SETUP ==================== -->
-        <section id="view-pin" class="app-view">
-            <div class="text-center mt-2 mb-6">
-                <div class="w-14 h-14 rounded-2xl bg-purple-500/15 border border-purple-500/30 flex items-center justify-center mx-auto mb-3">
-                    <i class="fa-solid fa-lock text-2xl text-purple-400"></i>
-                </div>
-                <h1 class="text-xl font-extrabold text-white">Set Withdrawal PIN</h1>
-                <p class="text-slate-400 text-xs mt-1 leading-relaxed">Create and confirm a compulsory 4-digit security PIN required for all withdrawals and transfers.</p>
-            </div>
+    function saveConfig() {
+      localStorage.setItem("gp_config_v3", JSON.stringify(appConfig));
+    }
 
-            <div class="space-y-5 mb-6">
-                <div>
-                    <label class="block text-xs font-medium text-slate-300 text-center mb-2.5">Create 4-Digit PIN</label>
-                    <div class="otp-grid">
-                        <input type="password" inputmode="numeric" maxlength="1" aria-label="New PIN digit 1" class="p1-digit otp-box" oninput="advanceDigit(this, '.p1-digit', 0)" onkeydown="handleDigitKeydown(event, '.p1-digit', 0)" onpaste="handleDigitPaste(event, '.p1-digit')">
-                        <input type="password" inputmode="numeric" maxlength="1" aria-label="New PIN digit 2" class="p1-digit otp-box" oninput="advanceDigit(this, '.p1-digit', 1)" onkeydown="handleDigitKeydown(event, '.p1-digit', 1)" onpaste="handleDigitPaste(event, '.p1-digit')">
-                        <input type="password" inputmode="numeric" maxlength="1" aria-label="New PIN digit 3" class="p1-digit otp-box" oninput="advanceDigit(this, '.p1-digit', 2)" onkeydown="handleDigitKeydown(event, '.p1-digit', 2)" onpaste="handleDigitPaste(event, '.p1-digit')">
-                        <input type="password" inputmode="numeric" maxlength="1" aria-label="New PIN digit 4" class="p1-digit otp-box" oninput="advanceDigit(this, '.p1-digit', 3)" onkeydown="handleDigitKeydown(event, '.p1-digit', 3)" onpaste="handleDigitPaste(event, '.p1-digit')">
-                    </div>
-                </div>
+    function saveUser() {
+      if (currentUser) {
+        localStorage.setItem("gp_user_v3", JSON.stringify(currentUser));
+      }
+    }
 
-                <div>
-                    <label class="block text-xs font-medium text-slate-300 text-center mb-2.5">Confirm 4-Digit PIN</label>
-                    <div class="otp-grid">
-                        <input type="password" inputmode="numeric" maxlength="1" aria-label="Confirm PIN digit 1" class="p2-digit otp-box" oninput="advanceDigit(this, '.p2-digit', 0)" onkeydown="handleDigitKeydown(event, '.p2-digit', 0)" onpaste="handleDigitPaste(event, '.p2-digit')">
-                        <input type="password" inputmode="numeric" maxlength="1" aria-label="Confirm PIN digit 2" class="p2-digit otp-box" oninput="advanceDigit(this, '.p2-digit', 1)" onkeydown="handleDigitKeydown(event, '.p2-digit', 1)" onpaste="handleDigitPaste(event, '.p2-digit')">
-                        <input type="password" inputmode="numeric" maxlength="1" aria-label="Confirm PIN digit 3" class="p2-digit otp-box" oninput="advanceDigit(this, '.p2-digit', 2)" onkeydown="handleDigitKeydown(event, '.p2-digit', 2)" onpaste="handleDigitPaste(event, '.p2-digit')">
-                        <input type="password" inputmode="numeric" maxlength="1" aria-label="Confirm PIN digit 4" class="p2-digit otp-box" oninput="advanceDigit(this, '.p2-digit', 3)" onkeydown="handleDigitKeydown(event, '.p2-digit', 3)" onpaste="handleDigitPaste(event, '.p2-digit')">
-                    </div>
-                </div>
-            </div>
+    // Top Notification Pop-up
+    function showToast(message, type = "info", duration = 4500) {
+      const container = document.getElementById("topToastContainer");
+      const toast = document.createElement("div");
+      toast.className = `toast-banner ${type}`;
+      const iconMap = {
+        info: "fa-circle-info",
+        success: "fa-circle-check",
+        warning: "fa-triangle-exclamation",
+        danger: "fa-circle-xmark"
+      };
+      toast.innerHTML = `
+        <i class="fa-solid ${iconMap[type] || "fa-bell"}" style="margin-top:2px;"></i>
+        <div style="flex:1;">${message}</div>
+      `;
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = "0";
+        toast.style.transform = "translateY(-10px)";
+        toast.style.transition = "all 0.2s";
+        setTimeout(() => toast.remove(), 220);
+      }, duration);
+    }
 
-            <button type="button" id="btn-save-pin" onclick="handleSavePin()" class="w-full bg-purple-600 hover:bg-purple-500 text-white font-semibold py-3.5 rounded-xl text-sm transition shadow-lg shadow-purple-600/25">
-                Save PIN &amp; Enter Dashboard
-            </button>
-        </section>
+    function copyText(text, label = "Copied to clipboard!") {
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(text).catch(() => {});
+      }
+      showToast(label, "success", 2500);
+    }
 
-        <!-- ==================== VIEW 6: USER HOME DASHBOARD ==================== -->
-        <section id="view-dashboard" class="app-view space-y-5">
+    // Populate Country Dropdown
+    function populateCountries() {
+      const sel = document.getElementById("regCountry");
+      sel.innerHTML = WORLD_COUNTRIES.map((c, idx) =>
+        `<option value="${idx}">${c.name} (${c.code} - ${c.symbol})</option>`
+      ).join("");
+    }
 
-            <!-- User Profile & Unique Wallet ID Row -->
-            <div class="flex items-center justify-between gap-2">
-                <div class="flex items-center gap-2.5 min-w-0">
-                    <div id="dash-avatar" class="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center font-bold text-white text-sm shrink-0">U</div>
-                    <div class="min-w-0">
-                        <h2 id="dash-username" class="text-sm font-bold text-white truncate">User Name</h2>
-                        <p id="dash-country" class="text-[11px] text-slate-400 truncate">Country</p>
-                    </div>
-                </div>
+    // Wire 4-Digit OTP / PIN Inputs
+    function setupDigitInputs(selector) {
+      const inputs = Array.from(document.querySelectorAll(selector));
+      inputs.forEach((inp, idx) => {
+        inp.addEventListener("input", (e) => {
+          const val = e.target.value.replace(/\D/g, "");
+          e.target.value = val.slice(-1);
+          if (val && idx < inputs.length - 1) {
+            inputs[idx + 1].focus();
+          }
+        });
+        inp.addEventListener("keydown", (e) => {
+          if (e.key === "Backspace" && !e.target.value && idx > 0) {
+            inputs[idx - 1].focus();
+          }
+        });
+        inp.addEventListener("paste", (e) => {
+          e.preventDefault();
+          const pasted = (e.clipboardData.getData("text") || "").replace(/\D/g, "").slice(0, 4);
+          pasted.split("").forEach((ch, i) => {
+            if (inputs[i]) inputs[i].value = ch;
+          });
+          if (inputs[Math.min(pasted.length, 3)]) inputs[Math.min(pasted.length, 3)].focus();
+        });
+      });
+    }
 
-                <button type="button" onclick="copyText(state.walletId, 'Unique Wallet ID copied!')" class="px-2.5 py-1.5 rounded-xl bg-slate-800 border border-slate-700 hover:border-blue-500/60 flex items-center gap-1.5 shrink-0 transition">
-                    <span id="dash-wallet-id" class="font-mono text-[11px] font-bold text-blue-300">WLT-000000</span>
-                    <i class="fa-regular fa-copy text-[11px] text-slate-400"></i>
-                </button>
-            </div>
+    function switchView(viewId) {
+      document.querySelectorAll(".app-view").forEach(v => v.classList.remove("active"));
+      document.getElementById(viewId).classList.add("active");
+      document.getElementById("headerLogoutBtn").style.display = (viewId === "dashboardView") ? "inline-flex" : "none";
+      window.scrollTo(0, 0);
+    }
 
-            <!-- Primary Country Currency Card + USD Equivalent Directly Below -->
-            <div class="bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-900 rounded-3xl p-5 shadow-xl border border-blue-400/20">
-                <div class="flex items-center justify-between gap-2 mb-1">
-                    <span id="dash-local-label" class="text-[11px] font-semibold uppercase tracking-wider text-blue-100 truncate">Home Currency Balance</span>
-                    <span id="dash-local-code" class="px-2 py-0.5 rounded-full bg-white/15 text-[10px] font-bold text-white shrink-0">USD</span>
-                </div>
+    function openModal(id) {
+      if (id === "adminModal") renderAdminPanel();
+      document.getElementById(id).classList.add("open");
+    }
 
-                <!-- Main Country Currency Balance -->
-                <div id="dash-local-balance" class="text-3xl font-extrabold text-white tracking-tight mt-1 break-all">
-                    $0.00
-                </div>
+    function closeModal(id) {
+      document.getElementById(id).classList.remove("open");
+    }
 
-                <!-- USD Equivalent Directly Below -->
-                <div class="mt-2">
-                    <span class="inline-flex items-center gap-1.5 text-xs font-medium text-blue-100 bg-slate-950/35 px-2.5 py-1 rounded-lg border border-white/10">
-                        <span>≈</span>
-                        <span id="dash-usd-equivalent" class="font-bold">$0.00</span>
-                        <span>USD Equivalent</span>
-                    </span>
-                </div>
+    function toggleAuthMode(mode) {
+      document.getElementById("signupBox").style.display = mode === "signup" ? "block" : "none";
+      document.getElementById("loginBox").style.display = mode === "login" ? "block" : "none";
+    }
 
-                <!-- Default Multi-Currency Wallets: EUR, GBP, USD -->
-                <div class="grid grid-cols-3 gap-2 border-t border-white/15 pt-3.5 mt-4">
-                    <div class="bg-slate-950/30 rounded-xl p-2">
-                        <span class="text-[10px] text-blue-200 block">EUR (€)</span>
-                        <span id="dash-eur-bal" class="text-xs font-bold text-white truncate block mt-0.5">€0.00</span>
-                    </div>
-                    <div class="bg-slate-950/30 rounded-xl p-2">
-                        <span class="text-[10px] text-blue-200 block">GBP (£)</span>
-                        <span id="dash-gbp-bal" class="text-xs font-bold text-white truncate block mt-0.5">£0.00</span>
-                    </div>
-                    <div class="bg-slate-950/30 rounded-xl p-2">
-                        <span class="text-[10px] text-blue-200 block">USD ($)</span>
-                        <span id="dash-usd-bal" class="text-xs font-bold text-white truncate block mt-0.5">$0.00</span>
-                    </div>
-                </div>
-            </div>
+    // Step 1: Sign Up -> Pop-up 4-Digit Code
+    function handleSignup(e) {
+      e.preventDefault();
+      const name = document.getElementById("regName").value.trim();
+      const email = document.getElementById("regEmail").value.trim().toLowerCase();
+      const countryIdx = parseInt(document.getElementById("regCountry").value, 10);
+      const password = document.getElementById("regPassword").value;
+      const country = WORLD_COUNTRIES[countryIdx] || WORLD_COUNTRIES[0];
 
-            <!-- 4 Main Action Buttons: Send, Withdraw, Request, Receive -->
-            <div class="grid grid-cols-4 gap-2.5">
-                <button type="button" onclick="openModal('modal-send')" class="flex flex-col items-center gap-1.5 group">
-                    <div class="w-13 h-13 rounded-2xl bg-slate-800 border border-slate-700 group-hover:border-blue-500 flex items-center justify-center text-blue-400 transition">
-                        <i class="fa-solid fa-paper-plane text-base"></i>
-                    </div>
-                    <span class="text-xs font-semibold text-slate-200">Send</span>
-                </button>
+      pendingSignupData = { name, email, password, country };
+      document.querySelectorAll(".verify-digit").forEach(i => i.value = "");
+      switchView("verifyView");
+      sendVerificationCode(false);
+    }
 
-                <button type="button" onclick="openWithdrawModal()" class="flex flex-col items-center gap-1.5 group">
-                    <div class="w-13 h-13 rounded-2xl bg-slate-800 border border-slate-700 group-hover:border-rose-500 flex items-center justify-center text-rose-400 transition">
-                        <i class="fa-solid fa-building-columns text-base"></i>
-                    </div>
-                    <span class="text-xs font-semibold text-slate-200">Withdraw</span>
-                </button>
+    function sendVerificationCode(isResend) {
+      currentOtpCode = String(Math.floor(1000 + Math.random() * 9000));
+      showToast(
+        `${isResend ? "New " : ""}Verification Code: <strong style="font-family:'JetBrains Mono',monospace; font-size:15px; letter-spacing:2px; color:#60a5fa;">${currentOtpCode}</strong>`,
+        "info",
+        9000
+      );
+    }
 
-                <button type="button" onclick="openModal('modal-request')" class="flex flex-col items-center gap-1.5 group">
-                    <div class="w-13 h-13 rounded-2xl bg-slate-800 border border-slate-700 group-hover:border-purple-500 flex items-center justify-center text-purple-400 transition">
-                        <i class="fa-solid fa-hand-holding-dollar text-base"></i>
-                    </div>
-                    <span class="text-xs font-semibold text-slate-200">Request</span>
-                </button>
+    function submitVerificationCode() {
+      const entered = Array.from(document.querySelectorAll(".verify-digit")).map(i => i.value).join("");
+      if (entered.length < 4 || entered !== currentOtpCode) {
+        showToast("Incorrect 4-digit verification code. Please check the pop-up notification or tap Resend.", "danger");
+        return;
+      }
+      showToast("Account verified! Now set your compulsory 4-digit withdrawal PIN.", "success");
+      document.querySelectorAll(".pin-digit").forEach(i => i.value = "");
+      switchView("pinSetupView");
+    }
 
-                <button type="button" onclick="openReceiveModal('wallet')" class="flex flex-col items-center gap-1.5 group">
-                    <div class="w-13 h-13 rounded-2xl bg-slate-800 border border-slate-700 group-hover:border-emerald-500 flex items-center justify-center text-emerald-400 transition">
-                        <i class="fa-solid fa-qrcode text-base"></i>
-                    </div>
-                    <span class="text-xs font-semibold text-slate-200">Receive</span>
-                </button>
-            </div>
+    // Step 2: Compulsory Withdrawal PIN -> Open Dashboard
+    function completePinSetup() {
+      const pin = Array.from(document.querySelectorAll(".pin-digit")).map(i => i.value).join("");
+      if (pin.length < 4) {
+        showToast("Please enter a complete 4-digit withdrawal PIN.", "warning");
+        return;
+      }
 
-            <!-- Live Incoming USD Payment Simulator -->
-            <div class="glass-panel rounded-2xl p-3.5 flex items-center justify-between gap-3">
-                <div class="min-w-0">
-                    <p class="text-xs font-bold text-white truncate">Test Incoming USD Payment</p>
-                    <p class="text-[11px] text-slate-400 truncate">Updates local currency &amp; USD below it</p>
-                </div>
-                <button type="button" onclick="simulateIncomingUSD(250)" class="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shrink-0 transition">
-                    + Simulate $250
-                </button>
-            </div>
+      const randomId = "WLT-" + Math.floor(100000 + Math.random() * 900000);
+      currentUser = {
+        name: pendingSignupData.name,
+        email: pendingSignupData.email,
+        password: pendingSignupData.password,
+        country: pendingSignupData.country,
+        walletId: randomId,
+        pin: pin,
+        balanceUsd: 1250.00, // Initial welcome balance in USD
+        transactions: [
+          {
+            id: "TX-" + Date.now(),
+            type: "credit",
+            title: "Welcome Deposit Received",
+            subtitle: "Sender sent $1,250.00 USD",
+            amountUsd: 1250.00,
+            status: "Completed",
+            time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+          }
+        ],
+        activeWithdrawal: null
+      };
 
-            <!-- Assets List on Homepage (Local Wallet, BTC, ETH) -->
+      saveUser();
+      showToast(`Wallet ${currentUser.walletId} created successfully!`, "success");
+      renderDashboard();
+      switchView("dashboardView");
+    }
+
+    function handleLogin(e) {
+      e.preventDefault();
+      const email = document.getElementById("loginEmail").value.trim().toLowerCase();
+      const pass = document.getElementById("loginPassword").value;
+      const saved = JSON.parse(localStorage.getItem("gp_user_v3"));
+
+      if (saved && saved.email === email && saved.password === pass) {
+        currentUser = saved;
+        showToast(`Welcome back, ${currentUser.name}!`, "success");
+        renderDashboard();
+        switchView("dashboardView");
+      } else {
+        showToast("Invalid email or password.", "danger");
+      }
+    }
+
+    function handlePasswordReset(e) {
+      e.preventDefault();
+      const email = document.getElementById("resetEmail").value.trim().toLowerCase();
+      const newPass = document.getElementById("resetNewPass").value;
+      const saved = JSON.parse(localStorage.getItem("gp_user_v3"));
+
+      if (saved && saved.email === email) {
+        saved.password = newPass;
+        localStorage.setItem("gp_user_v3", JSON.stringify(saved));
+        if (currentUser && currentUser.email === email) currentUser.password = newPass;
+        closeModal("forgotPasswordModal");
+        showToast("Password reset successful! You can now sign in.", "success");
+      } else {
+        showToast("No account found with that email address.", "danger");
+      }
+    }
+
+    function logoutUser() {
+      if (statusCountdownInterval) clearInterval(statusCountdownInterval);
+      switchView("authView");
+      toggleAuthMode("login");
+      showToast("Signed out of your wallet.", "info");
+    }
+
+    // Format Currency Helper
+    function formatMoney(amount, symbol) {
+      return symbol + Number(amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    // Render Dashboard (User Country Currency First, then USD, EUR, GBP — No Crypto on Home)
+    function renderDashboard() {
+      if (!currentUser) return;
+      const c = currentUser.country;
+      const localAmount = currentUser.balanceUsd * c.rate;
+
+      document.getElementById("dashGreeting").textContent = `Hi, ${currentUser.name} (${c.name})`;
+      document.getElementById("dashWalletId").textContent = currentUser.walletId;
+      document.getElementById("dashPrimaryBalance").textContent = `${formatMoney(localAmount, c.symbol)} ${c.code}`;
+      document.getElementById("dashUsdEquivalent").textContent = `≈ $${currentUser.balanceUsd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD Equivalent`;
+
+      // Build Fiat Currency Cards: User's Country Currency first, then USD, EUR, GBP as defaults
+      const wallets = [
+        {
+          code: c.code,
+          name: `${c.name} (${c.code})`,
+          badge: c.symbol,
+          amount: localAmount,
+          usdEq: currentUser.balanceUsd,
+          isPrimary: true
+        }
+      ];
+
+      const defaults = [
+        { code: "USD", name: "US Dollar (Default)", symbol: "$", rate: 1.00 },
+        { code: "EUR", name: "Euro (Default)", symbol: "€", rate: 0.92 },
+        { code: "GBP", name: "British Pound (Default)", symbol: "£", rate: 0.79 }
+      ];
+
+      defaults.forEach(def => {
+        if (def.code !== c.code) {
+          wallets.push({
+            code: def.code,
+            name: def.name,
+            badge: def.symbol,
+            amount: currentUser.balanceUsd * def.rate,
+            usdEq: currentUser.balanceUsd,
+            isPrimary: false
+          });
+        }
+      });
+
+      document.getElementById("fiatWalletsList").innerHTML = wallets.map(w => `
+        <div class="currency-card">
+          <div class="currency-left">
+            <div class="currency-badge">${w.badge}</div>
             <div>
-                <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2.5">Wallets &amp; Crypto Assets</h3>
-                <div class="space-y-2.5">
-                    <!-- Local Currency Wallet -->
-                    <div class="glass-panel rounded-2xl p-3.5 flex items-center justify-between gap-2">
-                        <div class="flex items-center gap-3 min-w-0">
-                            <div id="asset-local-icon" class="w-10 h-10 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold text-sm shrink-0">$</div>
-                            <div class="min-w-0">
-                                <h4 id="asset-local-title" class="text-sm font-semibold text-white truncate">Local Wallet</h4>
-                                <p id="asset-local-sub" class="text-[11px] text-slate-400 truncate">Primary Country Currency</p>
-                            </div>
-                        </div>
-                        <div class="text-right shrink-0">
-                            <p id="asset-local-amount" class="text-sm font-bold text-white">$0.00</p>
-                            <p id="asset-local-usd" class="text-[11px] text-slate-400">≈ $0.00 USD</p>
-                        </div>
-                    </div>
-
-                    <!-- Bitcoin (BTC) -->
-                    <div onclick="openReceiveModal('btc')" class="glass-panel rounded-2xl p-3.5 flex items-center justify-between gap-2 cursor-pointer hover:border-orange-500/40 transition">
-                        <div class="flex items-center gap-3 min-w-0">
-                            <div class="w-10 h-10 rounded-full bg-orange-500/20 text-orange-400 flex items-center justify-center shrink-0">
-                                <i class="fa-brands fa-btc text-base"></i>
-                            </div>
-                            <div class="min-w-0">
-                                <h4 class="text-sm font-semibold text-white truncate">Bitcoin (BTC)</h4>
-                                <p class="text-[11px] text-slate-400 truncate">Tap to view BTC address</p>
-                            </div>
-                        </div>
-                        <div class="text-right shrink-0">
-                            <p class="text-sm font-bold text-white">0.0350 BTC</p>
-                            <p class="text-[11px] text-slate-400">≈ $2,275.00 USD</p>
-                        </div>
-                    </div>
-
-                    <!-- Ethereum (ETH) -->
-                    <div onclick="openReceiveModal('eth')" class="glass-panel rounded-2xl p-3.5 flex items-center justify-between gap-2 cursor-pointer hover:border-indigo-500/40 transition">
-                        <div class="flex items-center gap-3 min-w-0">
-                            <div class="w-10 h-10 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center shrink-0">
-                                <i class="fa-brands fa-ethereum text-base"></i>
-                            </div>
-                            <div class="min-w-0">
-                                <h4 class="text-sm font-semibold text-white truncate">Ethereum (ETH)</h4>
-                                <p class="text-[11px] text-slate-400 truncate">Tap to view ETH address</p>
-                            </div>
-                        </div>
-                        <div class="text-right shrink-0">
-                            <p class="text-sm font-bold text-white">0.7500 ETH</p>
-                            <p class="text-[11px] text-slate-400">≈ $1,950.00 USD</p>
-                        </div>
-                    </div>
-                </div>
+              <div class="currency-name">${w.name}</div>
+              <div class="currency-sub">${w.isPrimary ? "Primary Local Currency" : "Default Global Wallet"}</div>
             </div>
+          </div>
+          <div class="currency-right">
+            <div class="currency-amt">${formatMoney(w.amount, w.badge)}</div>
+            <div class="currency-usd">≈ $${w.usdEq.toFixed(2)} USD</div>
+          </div>
+        </div>
+      `).join("");
 
-            <div class="pt-2 text-center">
-                <button type="button" onclick="handleLogout()" class="px-4 py-2 rounded-xl bg-slate-800 border border-slate-700 text-xs font-medium text-slate-400 hover:text-white">
-                    <i class="fa-solid fa-right-from-bracket mr-1"></i> Sign Out
-                </button>
+      renderWithdrawalStatusBanner();
+      renderTransactionHistory();
+    }
+
+    function renderTransactionHistory() {
+      const list = document.getElementById("transactionHistoryList");
+      const txs = currentUser.transactions || [];
+      document.getElementById("txCountLabel").textContent = `${txs.length} record${txs.length === 1 ? "" : "s"}`;
+
+      if (!txs.length) {
+        list.innerHTML = `<div style="font-size:12.5px; color:var(--text-muted); text-align:center; padding:16px;">No transactions yet.</div>`;
+        return;
+      }
+
+      const c = currentUser.country;
+      list.innerHTML = txs.map(tx => {
+        const localVal = formatMoney(tx.amountUsd * c.rate, c.symbol);
+        const sign = tx.type === "credit" ? "+" : "-";
+        const color = tx.type === "credit" ? "#34d399" : "#f8fafc";
+        return `
+          <div class="tx-item">
+            <div>
+              <div class="tx-title">${tx.title}</div>
+              <div class="tx-meta">${tx.subtitle} • ${tx.time}</div>
             </div>
-        </section>
-
-        <!-- ==================== MODALS (STRICTLY HIDDEN UNTIL .open) ==================== -->
-
-        <!-- 1. RECEIVE MODAL (Toggle Wallet ID, BTC, ETH) -->
-        <div id="modal-receive" class="app-modal" onclick="backdropClose(event, 'modal-receive')">
-            <div class="modal-card">
-                <div class="flex items-center justify-between mb-4">
-                    <h2 class="text-base font-bold text-white">Receive Money &amp; Crypto</h2>
-                    <button type="button" onclick="closeModal('modal-receive')" class="w-8 h-8 rounded-full bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center">
-                        <i class="fa-solid fa-xmark"></i>
-                    </button>
-                </div>
-
-                <!-- 3-Way Toggle -->
-                <div class="grid grid-cols-3 bg-slate-950 p-1 rounded-xl border border-slate-800 mb-5 gap-1">
-                    <button type="button" id="tab-rec-wallet" onclick="switchReceiveTab('wallet')" class="py-2 rounded-lg text-xs font-semibold bg-blue-600 text-white">Wallet ID</button>
-                    <button type="button" id="tab-rec-btc" onclick="switchReceiveTab('btc')" class="py-2 rounded-lg text-xs font-semibold text-slate-400">BTC</button>
-                    <button type="button" id="tab-rec-eth" onclick="switchReceiveTab('eth')" class="py-2 rounded-lg text-xs font-semibold text-slate-400">ETH</button>
-                </div>
-
-                <!-- Wallet ID Panel -->
-                <div id="panel-rec-wallet" class="text-center space-y-3">
-                    <p class="text-xs text-slate-400">Share your Unique GlobalPay Wallet ID to receive instant fiat transfers:</p>
-                    <div class="bg-slate-950 border border-slate-800 rounded-xl p-3.5 flex items-center justify-between gap-2">
-                        <span id="rec-wallet-val" class="font-mono text-sm font-bold text-blue-400 truncate">WLT-000000</span>
-                        <button type="button" onclick="copyText(state.walletId, 'Unique Wallet ID copied!')" class="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-semibold shrink-0">Copy ID</button>
-                    </div>
-                </div>
-
-                <!-- BTC Panel -->
-                <div id="panel-rec-btc" class="hidden text-center space-y-3">
-                    <p class="text-xs text-slate-400">Bitcoin (BTC) Deposit Address:</p>
-                    <div class="bg-slate-950 border border-slate-800 rounded-xl p-3.5 flex items-center justify-between gap-2">
-                        <span class="font-mono text-xs text-orange-300 truncate">bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh</span>
-                        <button type="button" onclick="copyText('bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh', 'BTC address copied!')" class="px-3 py-1.5 rounded-lg bg-orange-600 text-white text-xs font-semibold shrink-0">Copy BTC</button>
-                    </div>
-                </div>
-
-                <!-- ETH Panel -->
-                <div id="panel-rec-eth" class="hidden text-center space-y-3">
-                    <p class="text-xs text-slate-400">Ethereum (ERC20) Deposit Address:</p>
-                    <div class="bg-slate-950 border border-slate-800 rounded-xl p-3.5 flex items-center justify-between gap-2">
-                        <span class="font-mono text-xs text-indigo-300 truncate">0x71C7656EC7ab88b098defB751B7401B5f6d8976F</span>
-                        <button type="button" onclick="copyText('0x71C7656EC7ab88b098defB751B7401B5f6d8976F', 'ETH address copied!')" class="px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-semibold shrink-0">Copy ETH</button>
-                    </div>
-                </div>
+            <div style="text-align:right; flex-shrink:0;">
+              <div style="font-size:13px; font-weight:700; color:${color};">${sign}${localVal}</div>
+              <div style="font-size:10.5px; color:#93c5fd;">$${Number(tx.amountUsd).toFixed(2)} USD • ${tx.status}</div>
             </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function addTransaction(type, title, subtitle, amountUsd, status) {
+      currentUser.transactions.unshift({
+        id: "TX-" + Date.now(),
+        type,
+        title,
+        subtitle,
+        amountUsd,
+        status,
+        time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+      });
+      saveUser();
+      renderDashboard();
+    }
+
+    // Simulate Someone Sending USD to User
+    function simulateIncomingUsd() {
+      const incomingUsd = 250;
+      currentUser.balanceUsd += incomingUsd;
+      const c = currentUser.country;
+      const localAdded = formatMoney(incomingUsd * c.rate, c.symbol);
+      addTransaction(
+        "credit",
+        "Incoming Transfer Received",
+        `Sender sent $${incomingUsd.toFixed(2)} USD`,
+        incomingUsd,
+        "Completed"
+      );
+      showToast(`Received +${localAdded} (${c.code}) — Equivalent: $${incomingUsd.toFixed(2)} USD`, "success");
+    }
+
+    // Receive Modal (Wallet ID, Bitcoin, Ethereum)
+    function openReceiveModal() {
+      document.getElementById("recWalletIdVal").textContent = currentUser.walletId;
+      document.getElementById("recBtcAddrVal").textContent = appConfig.btcAddress;
+      document.getElementById("recEthAddrVal").textContent = appConfig.ethAddress;
+      switchReceiveTab("wallet");
+      openModal("receiveModal");
+    }
+
+    function switchReceiveTab(tab) {
+      document.getElementById("tabWalletId").classList.toggle("active", tab === "wallet");
+      document.getElementById("tabBtc").classList.toggle("active", tab === "btc");
+      document.getElementById("tabEth").classList.toggle("active", tab === "eth");
+
+      document.getElementById("receiveWalletPanel").style.display = tab === "wallet" ? "block" : "none";
+      document.getElementById("receiveBtcPanel").style.display = tab === "btc" ? "block" : "none";
+      document.getElementById("receiveEthPanel").style.display = tab === "eth" ? "block" : "none";
+    }
+
+    // Send Funds
+    function handleSendFunds(e) {
+      e.preventDefault();
+      const recipient = document.getElementById("sendRecipient").value.trim();
+      const amtUsd = parseFloat(document.getElementById("sendAmountUsd").value);
+      const pin = document.getElementById("sendPin").value;
+
+      if (pin !== currentUser.pin) {
+        showToast("Incorrect 4-digit withdrawal PIN.", "danger");
+        return;
+      }
+      if (amtUsd > currentUser.balanceUsd) {
+        showToast("Insufficient wallet balance.", "danger");
+        return;
+      }
+
+      currentUser.balanceUsd -= amtUsd;
+      addTransaction("debit", `Sent to ${recipient}`, "Internal Wallet Transfer", amtUsd, "Sent");
+      closeModal("sendModal");
+      e.target.reset();
+      showToast(`Sent $${amtUsd.toFixed(2)} USD to ${recipient}.`, "success");
+    }
+
+    // Request Payment
+    function handleRequestPayment(e) {
+      e.preventDefault();
+      const payer = document.getElementById("reqFromName").value.trim();
+      const amt = parseFloat(document.getElementById("reqAmountUsd").value);
+      const link = `${window.location.origin}/pay?to=${currentUser.walletId}&amount=${amt.toFixed(2)}`;
+      document.getElementById("generatedReqLink").textContent = link;
+      document.getElementById("requestLinkResult").style.display = "block";
+      showToast(`Payment request for $${amt.toFixed(2)} USD generated for ${payer}.`, "success");
+    }
+
+    // WITHDRAWAL FLOW: Step 1 -> Fill Details First; Step 2 -> Required Action Pops Up
+    function openWithdrawEntry() {
+      const wd = currentUser.activeWithdrawal;
+      if (wd && wd.status !== "completed") {
+        // Resume active withdrawal action step modal
+        document.getElementById("withdrawDetailsForm").style.display = "none";
+        document.getElementById("withdrawActionStepView").style.display = "block";
+        renderActiveWithdrawalStepModal();
+      } else {
+        document.getElementById("withdrawModalTitle").textContent = "Withdraw Funds";
+        document.getElementById("withdrawDetailsForm").style.display = "block";
+        document.getElementById("withdrawActionStepView").style.display = "none";
+        updateWithdrawDestinationFields();
+      }
+      openModal("withdrawModal");
+    }
+
+    function updateWithdrawDestinationFields() {
+      const method = document.getElementById("wdMethod").value;
+      const bankGroup = document.getElementById("wdBankSelectGroup");
+      const accLabel = document.getElementById("wdAccountLabel");
+      const accInput = document.getElementById("wdAccountTarget");
+
+      if (method === "Bank Transfer") {
+        bankGroup.style.display = "block";
+        accLabel.textContent = "Account Number / IBAN & Routing";
+        accInput.placeholder = "e.g. 0048291044";
+      } else if (method === "CashApp") {
+        bankGroup.style.display = "none";
+        accLabel.textContent = "CashApp $Cashtag";
+        accInput.placeholder = "e.g. $JohnDoePay";
+      } else if (method === "PayPal") {
+        bankGroup.style.display = "none";
+        accLabel.textContent = "PayPal Email Address";
+        accInput.placeholder = "e.g. john@paypal.com";
+      } else if (method === "Revolut") {
+        bankGroup.style.display = "none";
+        accLabel.textContent = "Revolut @Revtag or IBAN";
+        accInput.placeholder = "e.g. @johndoe";
+      } else {
+        bankGroup.style.display = "none";
+        accLabel.textContent = "Venmo @Username";
+        accInput.placeholder = "e.g. @john-doe";
+      }
+    }
+
+    function submitWithdrawalDetails(e) {
+      e.preventDefault();
+      const amountUsd = parseFloat(document.getElementById("wdAmountUsd").value);
+      const method = document.getElementById("wdMethod").value;
+      const bankName = document.getElementById("wdBankName").value;
+      const target = document.getElementById("wdAccountTarget").value.trim();
+      const holder = document.getElementById("wdHolderName").value.trim();
+      const pin = document.getElementById("wdConfirmPin").value;
+
+      if (pin !== currentUser.pin) {
+        showToast("Incorrect 4-digit withdrawal PIN.", "danger");
+        return;
+      }
+      if (amountUsd > currentUser.balanceUsd) {
+        showToast("Withdrawal amount exceeds your available balance.", "danger");
+        return;
+      }
+      if (!appConfig.steps.length) {
+        currentUser.balanceUsd -= amountUsd;
+        addTransaction("debit", `Withdrawal (${method})`, `${target}`, amountUsd, "Completed");
+        closeModal("withdrawModal");
+        showToast("Withdrawal processed successfully!", "success");
+        return;
+      }
+
+      const destinationLabel = method === "Bank Transfer" ? `${bankName} (${target})` : `${method} (${target})`;
+
+      currentUser.activeWithdrawal = {
+        amountUsd,
+        method,
+        destinationLabel,
+        holder,
+        stepIndex: 0,
+        status: "action_required", // action_required | pending_review | post_approval_wait | completed
+        appealedPriceUsd: null,
+        receiptDataUrl: null,
+        postStatusMessage: "",
+        waitEndsAt: null
+      };
+
+      addTransaction(
+        "debit",
+        `Withdrawal Initiated (${method})`,
+        destinationLabel,
+        amountUsd,
+        "Action Required"
+      );
+
+      // Immediately pop up the first required action step
+      document.getElementById("withdrawDetailsForm").style.display = "none";
+      document.getElementById("withdrawActionStepView").style.display = "block";
+      renderActiveWithdrawalStepModal();
+      showToast("Withdrawal submitted! Complete the required clearance step to release funds.", "warning");
+    }
+
+    function renderActiveWithdrawalStepModal() {
+      const wd = currentUser.activeWithdrawal;
+      const container = document.getElementById("withdrawActionStepView");
+      if (!wd) return;
+
+      const step = appConfig.steps[wd.stepIndex];
+      if (!step) {
+        wd.status = "completed";
+        saveUser();
+        renderDashboard();
+        closeModal("withdrawModal");
+        return;
+      }
+
+      const effectivePriceUsd = wd.appealedPriceUsd !== null ? Number(wd.appealedPriceUsd) : Number(step.priceUsd);
+      const isAppealed = wd.appealedPriceUsd !== null;
+      const c = currentUser.country;
+      const localFee = formatMoney(effectivePriceUsd * c.rate, c.symbol);
+
+      document.getElementById("withdrawModalTitle").textContent = `Step ${wd.stepIndex + 1} of ${appConfig.steps.length}: ${step.title}`;
+
+      if (wd.status === "pending_review") {
+        container.innerHTML = `
+          <div style="background:rgba(245,158,11,0.12); border:1px solid rgba(245,158,11,0.4); border-radius:14px; padding:14px; text-align:center;">
+            <i class="fa-solid fa-hourglass-half" style="font-size:26px; color:#fbbf24; margin-bottom:8px;"></i>
+            <div style="font-size:15px; font-weight:800; margin-bottom:4px;">Payment Screenshot Under Review</div>
+            <p style="font-size:12.5px; color:var(--text-muted);">Our compliance team is verifying your payment receipt for <strong>${step.title}</strong> ($${effectivePriceUsd.toFixed(2)} USD). You will be notified once approved.</p>
+            ${wd.receiptDataUrl ? `<img src="${wd.receiptDataUrl}" style="max-height:140px; border-radius:10px; margin-top:10px;" />` : ""}
+          </div>
+        `;
+        return;
+      }
+
+      if (wd.status === "post_approval_wait") {
+        const remainingSec = Math.max(0, Math.ceil((wd.waitEndsAt - Date.now()) / 1000));
+        const mins = Math.floor(remainingSec / 60);
+        const secs = String(remainingSec % 60).padStart(2, "0");
+        container.innerHTML = `
+          <div style="background:rgba(59,130,246,0.14); border:1px solid rgba(59,130,246,0.45); border-radius:14px; padding:16px; text-align:center;">
+            <i class="fa-solid fa-spinner fa-spin" style="font-size:26px; color:#60a5fa; margin-bottom:10px;"></i>
+            <div style="font-size:15px; font-weight:800; color:#93c5fd; margin-bottom:6px;">${wd.postStatusMessage}</div>
+            <p style="font-size:12.5px; color:var(--text-muted); margin-bottom:10px;">Step ${wd.stepIndex + 1} approved. Automatically advancing to the next stage in:</p>
+            <div style="font-family:'JetBrains Mono',monospace; font-size:22px; font-weight:800; color:#fff;">${mins}:${secs}</div>
+          </div>
+        `;
+        return;
+      }
+
+      // Default: action_required
+      uploadedReceiptDataUrl = "";
+      container.innerHTML = `
+        <div style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.35); border-radius:14px; padding:13px; margin-bottom:12px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <span style="font-size:12px; font-weight:800; color:#fca5a5;">REQUIRED CLEARANCE ACTION</span>
+            ${isAppealed ? `<span class="status-pill appealed"><i class="fa-solid fa-tag"></i> Amount Appealed</span>` : ""}
+          </div>
+          <div style="font-size:15px; font-weight:800; margin-bottom:4px;">${step.title}</div>
+          <p style="font-size:12.5px; color:#cbd5e1; margin-bottom:10px;">${step.description}</p>
+          <div style="display:flex; justify-content:space-between; align-items:center; padding-top:8px; border-top:1px solid rgba(148,163,184,0.2);">
+            <span style="font-size:12px; color:var(--text-muted);">Required Fee:</span>
+            <div style="text-align:right;">
+              <div style="font-size:16px; font-weight:800; color:#fff;">$${effectivePriceUsd.toFixed(2)} USD</div>
+              <div style="font-size:11px; color:#93c5fd;">≈ ${localFee} (${c.code})</div>
+            </div>
+          </div>
         </div>
 
-        <!-- 2. SEND FUNDS MODAL -->
-        <div id="modal-send" class="app-modal" onclick="backdropClose(event, 'modal-send')">
-            <div class="modal-card">
-                <div class="flex items-center justify-between mb-4">
-                    <h2 class="text-base font-bold text-white">Send Funds</h2>
-                    <button type="button" onclick="closeModal('modal-send')" class="w-8 h-8 rounded-full bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center">
-                        <i class="fa-solid fa-xmark"></i>
-                    </button>
-                </div>
-
-                <div class="space-y-3.5">
-                    <div>
-                        <label class="block text-xs text-slate-400 mb-1">Recipient Wallet ID or Email</label>
-                        <input type="text" id="send-to" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-3 text-sm text-white focus:border-blue-500 focus:outline-none" placeholder="e.g. WLT-482910">
-                    </div>
-                    <div>
-                        <label class="block text-xs text-slate-400 mb-1">Amount (USD)</label>
-                        <input type="number" id="send-amt" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-3 text-sm text-white focus:border-blue-500 focus:outline-none" placeholder="0.00">
-                    </div>
-                    <div>
-                        <label class="block text-xs text-slate-400 mb-1">4-Digit Withdrawal PIN</label>
-                        <input type="password" inputmode="numeric" maxlength="4" id="send-pin" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-3 text-sm text-white focus:border-blue-500 focus:outline-none" placeholder="••••">
-                    </div>
-                    <button type="button" onclick="handleSendSubmit()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold py-3.5 rounded-xl text-sm transition">
-                        Authorize &amp; Send
-                    </button>
-                </div>
-            </div>
+        <label class="form-label">Settlement Payment Address</label>
+        <div class="address-box">
+          <span class="address-text">${step.settlementAddress}</span>
+          <button type="button" class="copy-mini-btn" onclick="copyText('${step.settlementAddress}', 'Settlement address copied!')">Copy</button>
         </div>
 
-        <!-- 3. REQUEST PAYMENT MODAL -->
-        <div id="modal-request" class="app-modal" onclick="backdropClose(event, 'modal-request')">
-            <div class="modal-card">
-                <div class="flex items-center justify-between mb-4">
-                    <h2 class="text-base font-bold text-white">Request Payment</h2>
-                    <button type="button" onclick="closeModal('modal-request')" class="w-8 h-8 rounded-full bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center">
-                        <i class="fa-solid fa-xmark"></i>
-                    </button>
-                </div>
-
-                <div class="space-y-3.5">
-                    <div>
-                        <label class="block text-xs text-slate-400 mb-1">Amount to Request (USD)</label>
-                        <input type="number" id="req-amt" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-3 text-sm text-white focus:border-purple-500 focus:outline-none" placeholder="100.00">
-                    </div>
-                    <button type="button" onclick="handleRequestLink()" class="w-full bg-purple-600 hover:bg-purple-500 text-white font-semibold py-3.5 rounded-xl text-sm transition">
-                        Generate &amp; Copy Payment Link
-                    </button>
-                </div>
-            </div>
+        <label class="form-label">Upload Payment Screenshot</label>
+        <div class="upload-dropzone" onclick="document.getElementById('stepReceiptFile').click()">
+          <i class="fa-solid fa-cloud-arrow-up" style="font-size:22px; color:#60a5fa; margin-bottom:6px;"></i>
+          <div style="font-size:12.5px; font-weight:600;" id="receiptUploadLabel">Tap to select payment screenshot</div>
+          <img id="receiptPreviewImg" class="receipt-preview" />
+          <input type="file" id="stepReceiptFile" accept="image/*" style="display:none;" onchange="handleReceiptSelected(event)" />
         </div>
 
-        <!-- 4. MULTI-STEP WITHDRAWAL MODAL -->
-        <div id="modal-withdraw" class="app-modal" onclick="backdropClose(event, 'modal-withdraw')">
-            <div class="modal-card">
-                <div class="flex items-center justify-between pb-3 mb-4 border-b border-slate-800">
-                    <div>
-                        <h2 class="text-base font-bold text-white">Withdraw Funds</h2>
-                        <p id="wd-subtitle" class="text-[11px] text-slate-400">PIN Authorization</p>
-                    </div>
-                    <button type="button" onclick="closeModal('modal-withdraw')" class="w-8 h-8 rounded-full bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center">
-                        <i class="fa-solid fa-xmark"></i>
-                    </button>
-                </div>
+        <button type="button" class="btn-success" onclick="submitStepScreenshot()">
+          <i class="fa-solid fa-paper-plane"></i> Submit Screenshot for Review
+        </button>
+      `;
+    }
 
-                <div id="wd-body">
-                    <!-- Dynamic withdrawal content rendered here -->
-                </div>
-            </div>
+    function handleReceiptSelected(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        uploadedReceiptDataUrl = evt.target.result;
+        const img = document.getElementById("receiptPreviewImg");
+        img.src = uploadedReceiptDataUrl;
+        img.style.display = "inline-block";
+        document.getElementById("receiptUploadLabel").textContent = file.name;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function submitStepScreenshot() {
+      if (!uploadedReceiptDataUrl) {
+        showToast("Please upload your payment screenshot before submitting.", "warning");
+        return;
+      }
+      const wd = currentUser.activeWithdrawal;
+      const step = appConfig.steps[wd.stepIndex];
+      wd.status = "pending_review";
+      wd.receiptDataUrl = uploadedReceiptDataUrl;
+
+      addTransaction(
+        "debit",
+        `Receipt Submitted: ${step.title}`,
+        "Awaiting Admin Approval",
+        wd.appealedPriceUsd !== null ? wd.appealedPriceUsd : step.priceUsd,
+        "Under Review"
+      );
+
+      renderActiveWithdrawalStepModal();
+      showToast("Payment screenshot submitted! Admin review in progress.", "success");
+    }
+
+    function renderWithdrawalStatusBanner() {
+      const banner = document.getElementById("activeWithdrawalBanner");
+      const wd = currentUser.activeWithdrawal;
+      if (!wd || wd.status === "completed") {
+        banner.style.display = "none";
+        return;
+      }
+
+      const step = appConfig.steps[wd.stepIndex];
+      const effectivePriceUsd = wd.appealedPriceUsd !== null ? Number(wd.appealedPriceUsd) : Number(step.priceUsd);
+      const isAppealed = wd.appealedPriceUsd !== null;
+
+      let pillHtml = `<span class="status-pill">Action Required: Step ${wd.stepIndex + 1}</span>`;
+      let detailLine = `${step.title} — $${effectivePriceUsd.toFixed(2)} USD`;
+
+      if (wd.status === "pending_review") {
+        pillHtml = `<span class="status-pill">Under Admin Review</span>`;
+        detailLine = `Verifying screenshot for ${step.title}`;
+      } else if (wd.status === "post_approval_wait") {
+        const rem = Math.max(0, Math.ceil((wd.waitEndsAt - Date.now()) / 1000));
+        const m = Math.floor(rem / 60);
+        const s = String(rem % 60).padStart(2, "0");
+        pillHtml = `<span class="status-pill processing"><i class="fa-solid fa-spinner fa-spin"></i> Processing (${m}:${s})</span>`;
+        detailLine = wd.postStatusMessage;
+      }
+
+      banner.style.display = "block";
+      banner.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; margin-bottom:6px;">
+          ${pillHtml}
+          ${isAppealed ? `<span class="status-pill appealed">Amount Appealed</span>` : ""}
         </div>
+        <div style="font-size:13.5px; font-weight:800;">Withdrawal: $${wd.amountUsd.toFixed(2)} USD → ${wd.destinationLabel}</div>
+        <div style="font-size:12px; color:#cbd5e1; margin:4px 0 10px;">${detailLine}</div>
+        <button type="button" class="btn-primary" style="padding:9px 12px; font-size:12.5px;" onclick="openWithdrawEntry()">
+          View Withdrawal Progress
+        </button>
+      `;
+    }
 
-        <!-- 5. ADMIN APPROVAL SIMULATOR MODAL -->
-        <div id="modal-admin" class="app-modal" onclick="backdropClose(event, 'modal-admin')">
-            <div class="modal-card">
-                <div class="flex items-center justify-between mb-3">
-                    <h2 class="text-base font-bold text-amber-300 flex items-center gap-2">
-                        <i class="fa-solid fa-user-shield"></i> Admin Review Console
-                    </h2>
-                    <button type="button" onclick="closeModal('modal-admin')" class="w-8 h-8 rounded-full bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center">
-                        <i class="fa-solid fa-xmark"></i>
-                    </button>
-                </div>
-                <p class="text-xs text-slate-400 mb-4">Review uploaded payment proofs and approve withdrawal steps to trigger the automatic status timer.</p>
-
-                <div id="admin-body" class="bg-slate-950 border border-slate-800 rounded-xl p-4 mb-4 text-xs space-y-2">
-                    <!-- Populated dynamically -->
-                </div>
-
-                <button type="button" id="btn-admin-approve" onclick="handleAdminApprove()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-3 rounded-xl text-xs transition">
-                    Approve Payment Proof
-                </button>
-            </div>
-        </div>
-
-        <!-- 6. SUPPORT TICKET MODAL -->
-        <div id="modal-support" class="app-modal" onclick="backdropClose(event, 'modal-support')">
-            <div class="modal-card">
-                <div class="flex items-center justify-between mb-3">
-                    <h2 class="text-base font-bold text-white flex items-center gap-2">
-                        <i class="fa-solid fa-headset text-blue-400"></i> Contact Support
-                    </h2>
-                    <button type="button" onclick="closeModal('modal-support')" class="w-8 h-8 rounded-full bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center">
-                        <i class="fa-solid fa-xmark"></i>
-                    </button>
-                </div>
-                <p class="text-xs text-slate-400 mb-3">Have an issue with your account, deposit, or withdrawal step? Send a message directly to our support team.</p>
-
-                <div class="space-y-3">
-                    <input type="text" id="sup-subject" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:border-blue-500 focus:outline-none" placeholder="Issue Subject (e.g. Activation Charge)">
-                    <textarea id="sup-msg" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3.5 text-xs text-white h-24 focus:border-blue-500 focus:outline-none" placeholder="Describe your issue..."></textarea>
-                    <button type="button" onclick="handleSupportSubmit()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold py-3 rounded-xl text-xs transition">
-                        Submit Support Request
-                    </button>
-                </div>
-            </div>
-        </div>
-
-    </div>
-
-    <script>
-        // =====================================================================
-        // 1. ALL ~195 WORLD COUNTRIES & OFFICIAL CURRENCY RATES (PER 1 USD)
-        // =====================================================================
-        const COUNTRIES = [
-            ["United States", "USD", "$", 1.00],
-            ["Nigeria", "NGN", "₦", 1580.00],
-            ["United Kingdom", "GBP", "£", 0.79],
-            ["European Union (Eurozone)", "EUR", "€", 0.92],
-            ["Afghanistan", "AFN", "؋", 70.50],
-            ["Albania", "ALL", "L", 92.40],
-            ["Algeria", "DZD", "د.ج", 134.50],
-            ["Andorra", "EUR", "€", 0.92],
-            ["Angola", "AOA", "Kz", 850.00],
-            ["Antigua and Barbuda", "XCD", "$", 2.70],
-            ["Argentina", "ARS", "$", 980.00],
-            ["Armenia", "AMD", "֏", 387.00],
-            ["Australia", "AUD", "A$", 1.52],
-            ["Austria", "EUR", "€", 0.92],
-            ["Azerbaijan", "AZN", "₼", 1.70],
-            ["Bahamas", "BSD", "$", 1.00],
-            ["Bahrain", "BHD", ".د.ب", 0.38],
-            ["Bangladesh", "BDT", "৳", 119.50],
-            ["Barbados", "BBD", "$", 2.00],
-            ["Belarus", "BYN", "Br", 3.27],
-            ["Belgium", "EUR", "€", 0.92],
-            ["Belize", "BZD", "BZ$", 2.00],
-            ["Benin", "XOF", "CFA", 603.50],
-            ["Bhutan", "BTN", "Nu.", 83.90],
-            ["Bolivia", "BOB", "Bs.", 6.91],
-            ["Bosnia and Herzegovina", "BAM", "KM", 1.80],
-            ["Botswana", "BWP", "P", 13.45],
-            ["Brazil", "BRL", "R$", 5.65],
-            ["Brunei", "BND", "$", 1.34],
-            ["Bulgaria", "BGN", "лв", 1.80],
-            ["Burkina Faso", "XOF", "CFA", 603.50],
-            ["Burundi", "BIF", "FBu", 2890.00],
-            ["Cabo Verde", "CVE", "$", 101.40],
-            ["Cambodia", "KHR", "៛", 4065.00],
-            ["Cameroon", "XAF", "FCFA", 603.50],
-            ["Canada", "CAD", "C$", 1.38],
-            ["Central African Republic", "XAF", "FCFA", 603.50],
-            ["Chad", "XAF", "FCFA", 603.50],
-            ["Chile", "CLP", "$", 945.00],
-            ["China", "CNY", "¥", 7.12],
-            ["Colombia", "COP", "$", 4250.00],
-            ["Comoros", "KMF", "CF", 452.60],
-            ["Congo (Democratic Republic)", "CDF", "FC", 2840.00],
-            ["Congo (Republic)", "XAF", "FCFA", 603.50],
-            ["Costa Rica", "CRC", "₡", 518.00],
-            ["Côte d'Ivoire", "XOF", "CFA", 603.50],
-            ["Croatia", "EUR", "€", 0.92],
-            ["Cuba", "CUP", "$", 24.00],
-            ["Cyprus", "EUR", "€", 0.92],
-            ["Czech Republic", "CZK", "Kč", 23.20],
-            ["Denmark", "DKK", "kr", 6.86],
-            ["Djibouti", "DJF", "Fdj", 177.72],
-            ["Dominica", "XCD", "$", 2.70],
-            ["Dominican Republic", "DOP", "RD$", 59.80],
-            ["Ecuador", "USD", "$", 1.00],
-            ["Egypt", "EGP", "E£", 48.60],
-            ["El Salvador", "USD", "$", 1.00],
-            ["Equatorial Guinea", "XAF", "FCFA", 603.50],
-            ["Eritrea", "ERN", "Nfk", 15.00],
-            ["Estonia", "EUR", "€", 0.92],
-            ["Eswatini", "SZL", "E", 17.85],
-            ["Ethiopia", "ETB", "Br", 118.50],
-            ["Fiji", "FJD", "$", 2.24],
-            ["Finland", "EUR", "€", 0.92],
-            ["France", "EUR", "€", 0.92],
-            ["Gabon", "XAF", "FCFA", 603.50],
-            ["Gambia", "GMD", "D", 69.50],
-            ["Georgia", "GEL", "₾", 2.71],
-            ["Germany", "EUR", "€", 0.92],
-            ["Ghana", "GHS", "₵", 15.80],
-            ["Greece", "EUR", "€", 0.92],
-            ["Grenada", "XCD", "$", 2.70],
-            ["Guatemala", "GTQ", "Q", 7.73],
-            ["Guinea", "GNF", "FG", 8600.00],
-            ["Guinea-Bissau", "XOF", "CFA", 603.50],
-            ["Guyana", "GYD", "$", 209.00],
-            ["Haiti", "HTG", "G", 131.50],
-            ["Honduras", "HNL", "L", 24.85],
-            ["Hungary", "HUF", "Ft", 365.00],
-            ["Iceland", "ISK", "kr", 137.50],
-            ["India", "INR", "₹", 83.95],
-            ["Indonesia", "IDR", "Rp", 15450.00],
-            ["Iran", "IRR", "﷼", 42000.00],
-            ["Iraq", "IQD", "ع.د", 1310.00],
-            ["Ireland", "EUR", "€", 0.92],
-            ["Israel", "ILS", "₪", 3.74],
-            ["Italy", "EUR", "€", 0.92],
-            ["Jamaica", "JMD", "J$", 157.50],
-            ["Japan", "JPY", "¥", 148.50],
-            ["Jordan", "JOD", "JD", 0.71],
-            ["Kazakhstan", "KZT", "₸", 482.00],
-            ["Kenya", "KES", "KSh", 129.00],
-            ["Kiribati", "AUD", "A$", 1.52],
-            ["Korea, North", "KPW", "₩", 900.00],
-            ["Korea, South", "KRW", "₩", 1365.00],
-            ["Kuwait", "KWD", "KD", 0.31],
-            ["Kyrgyzstan", "KGS", "с", 85.60],
-            ["Laos", "LAK", "₭", 21950.00],
-            ["Latvia", "EUR", "€", 0.92],
-            ["Lebanon", "LBP", "ل.ل", 89500.00],
-            ["Lesotho", "LSL", "L", 17.85],
-            ["Liberia", "LRD", "$", 193.00],
-            ["Libya", "LYD", "LD", 4.78],
-            ["Liechtenstein", "CHF", "CHF", 0.86],
-            ["Lithuania", "EUR", "€", 0.92],
-            ["Luxembourg", "EUR", "€", 0.92],
-            ["Madagascar", "MGA", "Ar", 4550.00],
-            ["Malawi", "MWK", "MK", 1735.00],
-            ["Malaysia", "MYR", "RM", 4.32],
-            ["Maldives", "MVR", "Rf", 15.40],
-            ["Mali", "XOF", "CFA", 603.50],
-            ["Malta", "EUR", "€", 0.92],
-            ["Marshall Islands", "USD", "$", 1.00],
-            ["Mauritania", "MRU", "UM", 39.70],
-            ["Mauritius", "MUR", "₨", 46.20],
-            ["Mexico", "MXN", "$", 19.60],
-            ["Micronesia", "USD", "$", 1.00],
-            ["Moldova", "MDL", "L", 17.65],
-            ["Monaco", "EUR", "€", 0.92],
-            ["Mongolia", "MNT", "₮", 3398.00],
-            ["Montenegro", "EUR", "€", 0.92],
-            ["Morocco", "MAD", "DH", 9.82],
-            ["Mozambique", "MZN", "MT", 63.90],
-            ["Myanmar", "MMK", "K", 2100.00],
-            ["Namibia", "NAD", "$", 17.85],
-            ["Nauru", "AUD", "A$", 1.52],
-            ["Nepal", "NPR", "₨", 134.30],
-            ["Netherlands", "EUR", "€", 0.92],
-            ["New Zealand", "NZD", "NZ$", 1.64],
-            ["Nicaragua", "NIO", "C$", 36.80],
-            ["Niger", "XOF", "CFA", 603.50],
-            ["North Macedonia", "MKD", "ден", 56.60],
-            ["Norway", "NOK", "kr", 10.75],
-            ["Oman", "OMR", "ر.ع.", 0.385],
-            ["Pakistan", "PKR", "₨", 278.50],
-            ["Palau", "USD", "$", 1.00],
-            ["Palestine", "ILS", "₪", 3.74],
-            ["Panama", "PAB", "B/.", 1.00],
-            ["Papua New Guinea", "PGK", "K", 3.92],
-            ["Paraguay", "PYG", "₲", 7760.00],
-            ["Peru", "PEN", "S/", 3.76],
-            ["Philippines", "PHP", "₱", 56.80],
-            ["Poland", "PLN", "zł", 3.94],
-            ["Portugal", "EUR", "€", 0.92],
-            ["Qatar", "QAR", "ر.ق", 3.64],
-            ["Romania", "RON", "lei", 4.58],
-            ["Russia", "RUB", "₽", 94.50],
-            ["Rwanda", "RWF", "FRw", 1345.00],
-            ["Saint Kitts and Nevis", "XCD", "$", 2.70],
-            ["Saint Lucia", "XCD", "$", 2.70],
-            ["Saint Vincent and the Grenadines", "XCD", "$", 2.70],
-            ["Samoa", "WST", "WS$", 2.73],
-            ["San Marino", "EUR", "€", 0.92],
-            ["São Tomé and Príncipe", "STN", "Db", 22.55],
-            ["Saudi Arabia", "SAR", "﷼", 3.75],
-            ["Senegal", "XOF", "CFA", 603.50],
-            ["Serbia", "RSD", "din.", 107.80],
-            ["Seychelles", "SCR", "₨", 13.65],
-            ["Sierra Leone", "SLE", "Le", 22.60],
-            ["Singapore", "SGD", "S$", 1.31],
-            ["Slovakia", "EUR", "€", 0.92],
-            ["Slovenia", "EUR", "€", 0.92],
-            ["Solomon Islands", "SBD", "$", 8.42],
-            ["Somalia", "SOS", "S", 571.00],
-            ["South Africa", "ZAR", "R", 17.85],
-            ["South Sudan", "SSP", "£", 1580.00],
-            ["Spain", "EUR", "€", 0.92],
-            ["Sri Lanka", "LKR", "Rs", 296.00],
-            ["Sudan", "SDG", "ج.س.", 601.50],
-            ["Suriname", "SRD", "$", 31.40],
-            ["Sweden", "SEK", "kr", 10.42],
-            ["Switzerland", "CHF", "CHF", 0.86],
-            ["Syria", "SYP", "£", 13000.00],
-            ["Taiwan", "TWD", "NT$", 32.10],
-            ["Tajikistan", "TJS", "SM", 10.65],
-            ["Tanzania", "TZS", "TSh", 2720.00],
-            ["Thailand", "THB", "฿", 33.80],
-            ["Timor-Leste", "USD", "$", 1.00],
-            ["Togo", "XOF", "CFA", 603.50],
-            ["Tonga", "TOP", "T$", 2.34],
-            ["Trinidad and Tobago", "TTD", "TT$", 6.78],
-            ["Tunisia", "TND", "DT", 3.07],
-            ["Turkey", "TRY", "₺", 34.20],
-            ["Turkmenistan", "TMT", "m", 3.50],
-            ["Tuvalu", "AUD", "A$", 1.52],
-            ["Uganda", "UGX", "USh", 3695.00],
-            ["Ukraine", "UAH", "₴", 41.25],
-            ["United Arab Emirates", "AED", "د.إ", 3.67],
-            ["Uruguay", "UYU", "$U", 41.60],
-            ["Uzbekistan", "UZS", "so'm", 12780.00],
-            ["Vanuatu", "VUV", "VT", 119.50],
-            ["Vatican City", "EUR", "€", 0.92],
-            ["Venezuela", "VES", "Bs.S", 38.90],
-            ["Vietnam", "VND", "₫", 24850.00],
-            ["Yemen", "YER", "﷼", 250.30],
-            ["Zambia", "ZMW", "ZK", 26.40],
-            ["Zimbabwe", "ZWG", "ZiG", 24.80]
-        ];
-
-        const WITHDRAW_STEPS = [
-            {
-                title: "Step 1: Account Activation Charge",
-                desc: "To enable external payouts on your new Wallet ID, a one-time Account Activation Charge is required.",
-                feeUSD: 50.00,
-                address: "bc1qactivation8920globalpaywallet"
-            },
-            {
-                title: "Step 2: Liquidity Pool Verification Charge",
-                desc: "Cross-border currency settlement requires a temporary Liquidity Pool verification deposit.",
-                feeUSD: 120.00,
-                address: "0xLiquidityPool9918GlobalPayVerify"
-            },
-            {
-                title: "Step 3: Cross-Border Clearance Fee",
-                desc: "Final regulatory clearance charge prior to instant release of your payout.",
-                feeUSD: 75.00,
-                address: "0xClearanceSettlement7741GlobalPay"
-            }
-        ];
-
-        // =====================================================================
-        // 2. APPLICATION STATE & STORAGE
-        // =====================================================================
-        const STORAGE_KEY = "globalpay_state_v3";
-        let pendingSignup = null;
-        let activeOtpCode = "";
-        let wdPinUnlocked = false;
-        let timerInterval = null;
-        let toastTimeout = null;
-
-        let state = {
-            loggedIn: false,
-            name: "",
-            email: "",
-            country: "United States",
-            currencyCode: "USD",
-            currencySymbol: "$",
-            ratePerUSD: 1.00,
-            walletId: "",
-            pin: "",
-            balanceUSD: 1000.00,
-            wdStep: 0,
-            wdStatus: "idle", // idle | pending_admin | processing_timer
-            proofName: "",
-            proofDataUrl: "",
-            timerEnd: 0
-        };
-
-        function persistState() {
-            try {
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-            } catch (e) {}
-        }
-
-        function restoreState() {
-            try {
-                const raw = localStorage.getItem(STORAGE_KEY);
-                if (raw) {
-                    state = { ...state, ...JSON.parse(raw) };
-                }
-            } catch (e) {}
-        }
-
-        // =====================================================================
-        // 3. TOP POP-DOWN NOTIFICATION TOAST & VIEW/MODAL CONTROLLERS
-        // =====================================================================
-        function notify(msg, type = "info") {
-            const banner = document.getElementById("toast-banner");
-            const icon = document.getElementById("toast-icon");
-            const text = document.getElementById("toast-text");
-
-            const map = {
-                info: { border: "#3b82f6", cls: "fa-solid fa-circle-info text-blue-400" },
-                success: { border: "#10b981", cls: "fa-solid fa-circle-check text-emerald-400" },
-                warning: { border: "#f59e0b", cls: "fa-solid fa-triangle-exclamation text-amber-400" },
-                error: { border: "#f43f5e", cls: "fa-solid fa-circle-xmark text-rose-400" }
-            };
-            const cfg = map[type] || map.info;
-
-            banner.style.borderLeftColor = cfg.border;
-            icon.className = `${cfg.cls} text-base shrink-0`;
-            text.textContent = msg;
-
-            banner.classList.add("show");
-            if (toastTimeout) clearTimeout(toastTimeout);
-            toastTimeout = setTimeout(() => banner.classList.remove("show"), 3800);
-        }
-
-        function showView(viewId) {
-            document.querySelectorAll(".app-view").forEach(v => v.classList.remove("active"));
-            const target = document.getElementById(viewId);
-            if (target) target.classList.add("active");
-
-            const adminBtn = document.getElementById("header-admin-btn");
-            if (viewId === "view-dashboard") {
-                adminBtn.classList.remove("hidden");
+    // Timer Ticker for Post-Approval Admin Status Delay
+    function startStatusTicker() {
+      if (statusCountdownInterval) clearInterval(statusCountdownInterval);
+      statusCountdownInterval = setInterval(() => {
+        if (!currentUser || !currentUser.activeWithdrawal) return;
+        const wd = currentUser.activeWithdrawal;
+        if (wd.status === "post_approval_wait" && wd.waitEndsAt) {
+          if (Date.now() >= wd.waitEndsAt) {
+            // Advance to next step or complete withdrawal
+            const nextIdx = wd.stepIndex + 1;
+            if (nextIdx < appConfig.steps.length) {
+              wd.stepIndex = nextIdx;
+              wd.status = "action_required";
+              wd.appealedPriceUsd = null;
+              wd.receiptDataUrl = null;
+              wd.waitEndsAt = null;
+              saveUser();
+              showToast(`Next step required: ${appConfig.steps[nextIdx].title}`, "warning", 6000);
             } else {
-                adminBtn.classList.add("hidden");
+              wd.status = "completed";
+              currentUser.balanceUsd = Math.max(0, currentUser.balanceUsd - wd.amountUsd);
+              addTransaction(
+                "debit",
+                `Withdrawal Disbursed (${wd.method})`,
+                wd.destinationLabel,
+                wd.amountUsd,
+                "Completed"
+              );
+              showToast(`$${wd.amountUsd.toFixed(2)} USD withdrawal completed and sent to ${wd.destinationLabel}!`, "success", 7000);
             }
-            window.scrollTo(0, 0);
+          }
+          renderWithdrawalStatusBanner();
+          if (document.getElementById("withdrawModal").classList.contains("open")) {
+            renderActiveWithdrawalStepModal();
+          }
         }
-
-        function openModal(modalId) {
-            document.querySelectorAll(".app-modal").forEach(m => m.classList.remove("open"));
-            const modal = document.getElementById(modalId);
-            if (modal) modal.classList.add("open");
-
-            if (modalId === "modal-admin") renderAdminConsole();
-        }
-
-        function closeModal(modalId) {
-            const modal = document.getElementById(modalId);
-            if (modal) modal.classList.remove("open");
-        }
-
-        function backdropClose(event, modalId) {
-            if (event.target.id === modalId) closeModal(modalId);
-        }
-
-        function copyText(text, successMsg) {
-            const ta = document.createElement("textarea");
-            ta.value = text;
-            document.body.appendChild(ta);
-            ta.select();
-            try {
-                document.execCommand("copy");
-                notify(successMsg, "success");
-            } catch (e) {
-                notify("Could not copy automatically.", "error");
-            }
-            document.body.removeChild(ta);
-        }
-
-        function advanceDigit(el, selector, idx) {
-            el.value = el.value.replace(/[^0-9]/g, "").slice(-1);
-            const boxes = document.querySelectorAll(selector);
-            if (el.value.length === 1 && idx < boxes.length - 1) {
-                boxes[idx + 1].focus();
-            }
-        }
-
-        function handleDigitKeydown(event, selector, idx) {
-            const boxes = document.querySelectorAll(selector);
-            if (event.key === "Backspace" && !event.target.value && idx > 0) {
-                boxes[idx - 1].value = "";
-                boxes[idx - 1].focus();
-            }
-        }
-
-        function handleDigitPaste(event, selector) {
-            event.preventDefault();
-            const pasted = (event.clipboardData || window.clipboardData).getData("text").replace(/[^0-9]/g, "").slice(0, 4);
-            if (!pasted) return;
-            const boxes = document.querySelectorAll(selector);
-            pasted.split("").forEach((digit, i) => {
-                if (boxes[i]) boxes[i].value = digit;
-            });
-            const focusIdx = Math.min(pasted.length, boxes.length - 1);
-            if (boxes[focusIdx]) boxes[focusIdx].focus();
-        }
-
-        // =====================================================================
-        // 4. POPULATE ALL WORLD COUNTRIES
-        // =====================================================================
-        function initCountriesDropdown() {
-            const sel = document.getElementById("signup-country");
-            sel.innerHTML = `<option value="" disabled selected>Select your country (All World Countries)</option>`;
-
-            const popularGroup = document.createElement("optgroup");
-            popularGroup.label = "Featured Countries & Default Currencies";
-            COUNTRIES.slice(0, 4).forEach(([name, code, sym]) => {
-                const o = document.createElement("option");
-                o.value = name;
-                o.textContent = `${name} — ${code} (${sym})`;
-                popularGroup.appendChild(o);
-            });
-            sel.appendChild(popularGroup);
-
-            const allGroup = document.createElement("optgroup");
-            allGroup.label = "All World Countries (A - Z)";
-            [...COUNTRIES].sort((a, b) => a[0].localeCompare(b[0])).forEach(([name, code, sym]) => {
-                const o = document.createElement("option");
-                o.value = name;
-                o.textContent = `${name} — ${code} (${sym})`;
-                allGroup.appendChild(o);
-            });
-            sel.appendChild(allGroup);
-        }
-
-        function lookupCountry(name) {
-            const item = COUNTRIES.find(c => c[0] === name);
-            return item
-                ? { name: item[0], code: item[1], symbol: item[2], ratePerUSD: item[3] }
-                : { name: "United States", code: "USD", symbol: "$", ratePerUSD: 1.00 };
-        }
-
-        // =====================================================================
-        // 5. SIGN UP -> 4-DIGIT CODE VERIFICATION -> COMPULSORY PIN SETUP
-        // =====================================================================
-        function handleSignup() {
-            const name = document.getElementById("signup-name").value.trim();
-            const email = document.getElementById("signup-email").value.trim();
-            const countryName = document.getElementById("signup-country").value;
-            const password = document.getElementById("signup-password").value;
-            const agreed = document.getElementById("signup-terms").checked;
-
-            if (!name || !email || !countryName || !password) {
-                return notify("Please complete all fields including your country.", "error");
-            }
-            if (!agreed) {
-                return notify("Please agree to the Terms & Conditions checkbox.", "warning");
-            }
-
-            const c = lookupCountry(countryName);
-            const randomId = `WLT-${Math.floor(100000 + Math.random() * 900000)}`;
-
-            pendingSignup = {
-                name,
-                email,
-                country: c.name,
-                currencyCode: c.code,
-                currencySymbol: c.symbol,
-                ratePerUSD: c.ratePerUSD,
-                walletId: randomId,
-                balanceUSD: 1000.00,
-                wdStep: 0,
-                wdStatus: "idle"
-            };
-
-            activeOtpCode = String(Math.floor(1000 + Math.random() * 9000));
-            document.querySelectorAll(".v-digit").forEach(i => i.value = "");
-
-            showView("view-verify");
-            notify(`Your 4-digit verification code is: ${activeOtpCode}`, "info");
-            setTimeout(() => {
-                const firstBox = document.querySelector(".v-digit");
-                if (firstBox) firstBox.focus();
-            }, 120);
-        }
-
-        function resendVerifyCode() {
-            activeOtpCode = String(Math.floor(1000 + Math.random() * 9000));
-            document.querySelectorAll(".v-digit").forEach(i => i.value = "");
-            notify(`New 4-digit verification code: ${activeOtpCode}`, "info");
-            const firstBox = document.querySelector(".v-digit");
-            if (firstBox) firstBox.focus();
-        }
-
-        function handleVerifyCode() {
-            const entered = Array.from(document.querySelectorAll(".v-digit")).map(i => i.value).join("");
-            if (entered.length < 4) {
-                return notify("Enter all 4 digits of the verification code.", "warning");
-            }
-            if (entered !== activeOtpCode) {
-                document.querySelectorAll(".v-digit").forEach(i => i.value = "");
-                return notify("Incorrect 4-digit code. Check the screen notification and retry.", "error");
-            }
-
-            document.querySelectorAll(".p1-digit, .p2-digit").forEach(i => i.value = "");
-            showView("view-pin");
-            notify("Account verified! Set your compulsory 4-digit Withdrawal PIN.", "success");
-            setTimeout(() => {
-                const firstPin = document.querySelector(".p1-digit");
-                if (firstPin) firstPin.focus();
-            }, 120);
-        }
-
-        function handleSavePin() {
-            const pin1 = Array.from(document.querySelectorAll(".p1-digit")).map(i => i.value).join("");
-            const pin2 = Array.from(document.querySelectorAll(".p2-digit")).map(i => i.value).join("");
-
-            if (pin1.length < 4 || pin2.length < 4) {
-                return notify("Please enter and confirm your 4-digit Withdrawal PIN.", "error");
-            }
-            if (pin1 !== pin2) {
-                return notify("PIN entries do not match. Please re-enter.", "error");
-            }
-
-            state = {
-                ...state,
-                ...(pendingSignup || {}),
-                loggedIn: true,
-                pin: pin1
-            };
-            persistState();
-            renderDashboard();
-            showView("view-dashboard");
-            notify("Withdrawal PIN saved! Welcome to your GlobalPay Dashboard.", "success");
-        }
-
-        function handleLogin() {
-            const email = document.getElementById("login-email").value.trim();
-            const pass = document.getElementById("login-password").value;
-            if (!email || !pass) return notify("Enter your email and password.", "error");
-
-            restoreState();
-            if (state.email && state.email.toLowerCase() === email.toLowerCase() && state.pin) {
-                state.loggedIn = true;
-                persistState();
-                renderDashboard();
-                showView("view-dashboard");
-                notify(`Welcome back, ${state.name}!`, "success");
-            } else {
-                notify("Account not found on this device. Please Create Account first.", "warning");
-            }
-        }
-
-        function handleForgotPassword() {
-            const email = document.getElementById("forgot-email").value.trim();
-            if (!email) return notify("Enter your registered email address.", "warning");
-            notify(`Password reset link sent to ${email}.`, "success");
-            showView("view-login");
-        }
-
-        function handleLogout() {
-            state.loggedIn = false;
-            persistState();
-            showView("view-signup");
-            notify("You have signed out.", "info");
-        }
-
-        // =====================================================================
-        // 6. DASHBOARD RENDERING & LIVE CURRENCY UPDATES
-        // =====================================================================
-        function fmt(amount, sym) {
-            return `${sym}${Number(amount).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-        }
-
-        function renderDashboard() {
-            const localBal = state.balanceUSD * state.ratePerUSD;
-            const eurBal = state.balanceUSD * 0.92;
-            const gbpBal = state.balanceUSD * 0.79;
-
-            document.getElementById("dash-avatar").textContent = (state.name || "U").charAt(0).toUpperCase();
-            document.getElementById("dash-username").textContent = state.name || "User";
-            document.getElementById("dash-country").textContent = `${state.country} (${state.currencyCode})`;
-            document.getElementById("dash-wallet-id").textContent = state.walletId;
-
-            // Main Country Currency + USD Equivalent right below
-            document.getElementById("dash-local-label").textContent = `${state.country} Balance`;
-            document.getElementById("dash-local-code").textContent = state.currencyCode;
-            document.getElementById("dash-local-balance").textContent = fmt(localBal, state.currencySymbol);
-            document.getElementById("dash-usd-equivalent").textContent = fmt(state.balanceUSD, "$");
-
-            // Default EUR, GBP, USD cards
-            document.getElementById("dash-eur-bal").textContent = fmt(eurBal, "€");
-            document.getElementById("dash-gbp-bal").textContent = fmt(gbpBal, "£");
-            document.getElementById("dash-usd-bal").textContent = fmt(state.balanceUSD, "$");
-
-            // Homepage Asset Row
-            document.getElementById("asset-local-icon").textContent = state.currencySymbol;
-            document.getElementById("asset-local-title").textContent = `${state.currencyCode} Wallet`;
-            document.getElementById("asset-local-sub").textContent = `${state.country} • ID: ${state.walletId}`;
-            document.getElementById("asset-local-amount").textContent = fmt(localBal, state.currencySymbol);
-            document.getElementById("asset-local-usd").textContent = `≈ ${fmt(state.balanceUSD, "$")} USD`;
-
-            // Receive Modal Wallet ID
-            document.getElementById("rec-wallet-val").textContent = state.walletId;
-        }
-
-        function simulateIncomingUSD(usd) {
-            state.balanceUSD += usd;
-            persistState();
-            renderDashboard();
-            const localCredit = fmt(usd * state.ratePerUSD, state.currencySymbol);
-            notify(`Received +$${usd.toFixed(2)} USD (${localCredit} ${state.currencyCode})!`, "success");
-        }
-
-        // =====================================================================
-        // 7. RECEIVE, SEND, REQUEST & SUPPORT MODALS
-        // =====================================================================
-        function openReceiveModal(tab) {
-            openModal("modal-receive");
-            switchReceiveTab(tab);
-        }
-
-        function switchReceiveTab(tab) {
-            ["wallet", "btc", "eth"].forEach(t => {
-                document.getElementById(`panel-rec-${t}`).classList.add("hidden");
-                const btn = document.getElementById(`tab-rec-${t}`);
-                btn.className = "py-2 rounded-lg text-xs font-semibold text-slate-400";
-            });
-            document.getElementById(`panel-rec-${tab}`).classList.remove("hidden");
-            document.getElementById(`tab-rec-${tab}`).className = "py-2 rounded-lg text-xs font-semibold bg-blue-600 text-white";
-        }
-
-        function handleSendSubmit() {
-            const to = document.getElementById("send-to").value.trim();
-            const amt = parseFloat(document.getElementById("send-amt").value);
-            const pin = document.getElementById("send-pin").value;
-
-            if (!to || isNaN(amt) || amt <= 0) return notify("Enter a valid recipient and amount.", "error");
-            if (pin !== state.pin) return notify("Incorrect 4-digit Withdrawal PIN.", "error");
-            if (amt > state.balanceUSD) return notify("Insufficient balance.", "error");
-
-            state.balanceUSD -= amt;
-            persistState();
-            renderDashboard();
-            closeModal("modal-send");
-            notify(`Sent $${amt.toFixed(2)} USD to ${to}.`, "success");
-        }
-
-        function handleRequestLink() {
-            const amt = document.getElementById("req-amt").value || "100";
-            const link = `${window.location.origin}/?pay=${state.walletId}&usd=${amt}`;
-            copyText(link, `Payment request link for $${amt} USD copied!`);
-            closeModal("modal-request");
-        }
-
-        function handleSupportSubmit() {
-            const subj = document.getElementById("sup-subject").value.trim();
-            const msg = document.getElementById("sup-msg").value.trim();
-            if (!msg) return notify("Please describe your issue first.", "warning");
-            document.getElementById("sup-subject").value = "";
-            document.getElementById("sup-msg").value = "";
-            closeModal("modal-support");
-            notify(`Support ticket "${subj || "Account Help"}" submitted!`, "success");
-        }
-
-        // =====================================================================
-        // 8. MULTI-STEP WITHDRAWAL + ADMIN APPROVAL + 2-3 MIN STATUS TIMER
-        // =====================================================================
-        function openWithdrawModal() {
-            if (state.wdStatus === "pending_admin" || state.wdStatus === "processing_timer") {
-                wdPinUnlocked = true;
-            }
-            openModal("modal-withdraw");
-            renderWithdrawBody();
-        }
-
-        function renderWithdrawBody() {
-            const body = document.getElementById("wd-body");
-            const sub = document.getElementById("wd-subtitle");
-
-            if (!wdPinUnlocked) {
-                sub.textContent = "PIN Verification Required";
-                body.innerHTML = `
-                    <div class="text-center space-y-4">
-                        <p class="text-xs text-slate-300">Enter your compulsory 4-digit Withdrawal PIN to proceed:</p>
-                        <input type="password" inputmode="numeric" maxlength="4" id="wd-pin-input" class="w-40 mx-auto block bg-slate-950 border border-slate-700 rounded-xl py-3 text-center text-2xl font-bold tracking-[0.4em] text-white focus:border-purple-500 focus:outline-none" placeholder="••••">
-                        <button type="button" onclick="verifyWithdrawPin()" class="w-full bg-purple-600 hover:bg-purple-500 text-white font-semibold py-3.5 rounded-xl text-sm">
-                            Verify PIN
-                        </button>
-                    </div>
-                `;
-                return;
-            }
-
-            if (state.wdStep >= WITHDRAW_STEPS.length) {
-                sub.textContent = "All Steps Approved";
-                body.innerHTML = `
-                    <div class="text-center py-4 space-y-3">
-                        <i class="fa-solid fa-circle-check text-4xl text-emerald-400"></i>
-                        <h3 class="text-base font-bold text-white">Withdrawal Approved &amp; Disbursed!</h3>
-                        <p class="text-xs text-slate-400">All required verification charges have been cleared.</p>
-                        <button type="button" onclick="resetWithdrawDemo()" class="w-full bg-slate-800 text-slate-300 py-3 rounded-xl text-xs font-semibold mt-2">
-                            Reset Demo Withdrawal Flow
-                        </button>
-                    </div>
-                `;
-                return;
-            }
-
-            const step = WITHDRAW_STEPS[state.wdStep];
-            const localFee = fmt(step.feeUSD * state.ratePerUSD, state.currencySymbol);
-            sub.textContent = `Required Action ${state.wdStep + 1} of ${WITHDRAW_STEPS.length}`;
-
-            if (state.wdStatus === "pending_admin") {
-                body.innerHTML = `
-                    <div class="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4 text-center space-y-3">
-                        <i class="fa-solid fa-hourglass-half text-2xl text-amber-400"></i>
-                        <h3 class="text-sm font-bold text-white">Status: Pending Admin Approval</h3>
-                        <p class="text-xs text-slate-300">Receipt <strong>${state.proofName}</strong> submitted for <strong>${step.title}</strong>.</p>
-                        <button type="button" onclick="openModal('modal-admin')" class="px-4 py-2 rounded-xl bg-amber-500 text-slate-950 font-bold text-xs">
-                            Open Admin Console to Approve
-                        </button>
-                    </div>
-                `;
-                return;
-            }
-
-            if (state.wdStatus === "processing_timer") {
-                body.innerHTML = `
-                    <div class="bg-blue-500/10 border border-blue-500/30 rounded-2xl p-4 text-center space-y-3">
-                        <div class="spinner mx-auto"></div>
-                        <span class="inline-block px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-bold">Admin Approved • Updating Status</span>
-                        <h3 class="text-sm font-bold text-white">Processing Clearance Status...</h3>
-                        <p class="text-xs text-slate-400">Automatically advancing to the next required step once the status window completes:</p>
-                        <div class="bg-slate-950 border border-slate-800 rounded-xl py-2.5 px-4">
-                            <span id="wd-timer-text" class="font-mono text-xl font-bold text-blue-400">02:30</span>
-                        </div>
-                        <button type="button" onclick="fastForwardTimer()" class="text-xs text-amber-400 underline font-medium">
-                            Fast-Forward Timer (5s Test)
-                        </button>
-                    </div>
-                `;
-                runStatusTimer();
-                return;
-            }
-
-            // Default Required Action Screen + Payment Screenshot Upload
-            body.innerHTML = `
-                <div class="space-y-3.5">
-                    <div class="bg-rose-500/10 border border-rose-500/30 rounded-2xl p-4">
-                        <h3 class="text-sm font-bold text-white">${step.title}</h3>
-                        <p class="text-xs text-slate-300 mt-1 leading-relaxed">${step.desc}</p>
-                        <div class="mt-3 pt-2.5 border-t border-rose-500/20 flex items-center justify-between">
-                            <span class="text-xs text-slate-400">Required Charge:</span>
-                            <div class="text-right">
-                                <span class="text-sm font-extrabold text-white">$${step.feeUSD.toFixed(2)} USD</span>
-                                <span class="block text-[11px] text-rose-300">≈ ${localFee} (${state.currencyCode})</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="bg-slate-950 border border-slate-800 rounded-xl p-3">
-                        <span class="text-[10px] text-slate-400 block mb-1">Settlement Wallet Address</span>
-                        <div class="flex items-center justify-between gap-2">
-                            <span class="font-mono text-xs text-blue-300 truncate">${step.address}</span>
-                            <button type="button" onclick="copyText('${step.address}', 'Settlement address copied!')" class="px-2.5 py-1 rounded-lg bg-blue-600/20 text-blue-400 text-xs font-semibold shrink-0">Copy</button>
-                        </div>
-                    </div>
-
-                    <div>
-                        <label class="block text-xs font-medium text-slate-300 mb-1">Upload Payment Screenshot</label>
-                        <label class="border-2 border-dashed border-slate-700 hover:border-blue-500 rounded-2xl p-4 flex flex-col items-center justify-center cursor-pointer bg-slate-950/60">
-                            <input type="file" accept="image/*" class="hidden" onchange="onProofFileChange(this)">
-                            <i class="fa-solid fa-cloud-arrow-up text-xl text-blue-400 mb-1"></i>
-                            <span id="wd-file-label" class="text-xs text-slate-200 font-medium text-center">Tap to select payment screenshot</span>
-                            <img id="wd-file-preview" class="hidden mt-2.5 max-h-24 rounded-lg border border-slate-700" alt="Receipt">
-                        </label>
-                    </div>
-
-                    <button type="button" id="btn-wd-submit" onclick="submitWithdrawProof()" disabled class="w-full bg-slate-800 text-slate-500 font-semibold py-3.5 rounded-xl text-sm cursor-not-allowed">
-                        Submit Screenshot for Review
-                    </button>
-                </div>
-            `;
-        }
-
-        function verifyWithdrawPin() {
-            const val = document.getElementById("wd-pin-input").value;
-            if (val !== state.pin) return notify("Incorrect 4-digit Withdrawal PIN.", "error");
-            wdPinUnlocked = true;
-            notify("PIN verified. Action required before payout.", "info");
-            renderWithdrawBody();
-        }
-
-        function onProofFileChange(input) {
-            if (!input.files || !input.files[0]) return;
-            const file = input.files[0];
-            state.proofName = file.name;
-
-            const reader = new FileReader();
-            reader.onload = e => {
-                state.proofDataUrl = e.target.result;
-                const img = document.getElementById("wd-file-preview");
-                if (img) {
-                    img.src = e.target.result;
-                    img.classList.remove("hidden");
-                }
-            };
-            reader.readAsDataURL(file);
-
-            document.getElementById("wd-file-label").textContent = `Selected: ${file.name}`;
-            const btn = document.getElementById("btn-wd-submit");
-            btn.disabled = false;
-            btn.className = "w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold py-3.5 rounded-xl text-sm transition";
-        }
-
-        function submitWithdrawProof() {
-            state.wdStatus = "pending_admin";
-            persistState();
-            notify("Payment screenshot uploaded! Awaiting admin approval.", "info");
-            renderWithdrawBody();
-        }
-
-        function renderAdminConsole() {
-            const box = document.getElementById("admin-body");
-            const btn = document.getElementById("btn-admin-approve");
-
-            if (state.wdStep >= WITHDRAW_STEPS.length) {
-                box.innerHTML = `<p class="text-emerald-400 font-semibold">All withdrawal steps have been completed and approved.</p>`;
-                btn.classList.add("hidden");
-                return;
-            }
-
-            const step = WITHDRAW_STEPS[state.wdStep];
-            if (state.wdStatus === "pending_admin") {
-                btn.classList.remove("hidden");
-                box.innerHTML = `
-                    <p><span class="text-slate-400">User:</span> <strong class="text-white">${state.name} (${state.walletId})</strong></p>
-                    <p><span class="text-slate-400">Step:</span> <strong class="text-amber-300">${step.title}</strong></p>
-                    <p><span class="text-slate-400">File:</span> <span class="text-blue-300">${state.proofName}</span></p>
-                    ${state.proofDataUrl ? `<img src="${state.proofDataUrl}" class="w-full max-h-32 object-contain rounded-lg border border-slate-700 mt-2">` : ""}
-                `;
-            } else {
-                btn.classList.add("hidden");
-                box.innerHTML = `<p class="text-slate-300">No proof awaiting review right now. Current status: <strong>${state.wdStatus}</strong>.</p>`;
-            }
-        }
-
-        function handleAdminApprove() {
-            state.wdStatus = "processing_timer";
-            state.timerEnd = Date.now() + 150000; // 2 minutes 30 seconds
-            persistState();
-            closeModal("modal-admin");
-            notify("Admin approved! Status processing for 2m 30s before advancing.", "success");
-            openWithdrawModal();
-        }
-
-        function fastForwardTimer() {
-            state.timerEnd = Date.now() + 5000;
-            persistState();
-            notify("Timer fast-forwarded to 5 seconds.", "info");
-        }
-
-        function runStatusTimer() {
-            if (timerInterval) clearInterval(timerInterval);
-            const update = () => {
-                if (state.wdStatus !== "processing_timer") {
-                    clearInterval(timerInterval);
-                    return;
-                }
-                const diff = state.timerEnd - Date.now();
-                const el = document.getElementById("wd-timer-text");
-
-                if (diff <= 0) {
-                    clearInterval(timerInterval);
-                    state.wdStep += 1;
-                    state.wdStatus = "idle";
-                    state.proofName = "";
-                    state.proofDataUrl = "";
-                    persistState();
-                    notify("Status cleared! Moving to next required withdrawal step.", "info");
-                    if (document.getElementById("modal-withdraw").classList.contains("open")) {
-                        renderWithdrawBody();
-                    }
-                    return;
-                }
-
-                const totalSec = Math.ceil(diff / 1000);
-                const m = String(Math.floor(totalSec / 60)).padStart(2, "0");
-                const s = String(totalSec % 60).padStart(2, "0");
-                if (el) el.textContent = `${m}:${s}`;
-            };
-            update();
-            timerInterval = setInterval(update, 1000);
-        }
-
-        function resetWithdrawDemo() {
-            state.wdStep = 0;
-            state.wdStatus = "idle";
-            persistState();
-            renderWithdrawBody();
-            notify("Withdrawal steps reset to Step 1.", "info");
-        }
-
-        // =====================================================================
-        // 9. BOOTSTRAP
-        // =====================================================================
-        initCountriesDropdown();
-        restoreState();
-        if (state.loggedIn && state.pin && state.walletId) {
-            renderDashboard();
-            showView("view-dashboard");
-        } else {
-            showView("view-signup");
-        }
-    </script>
+      }, 1000);
+    }
+
+    // Support Chat
+    function sendSupportMessage(e) {
+      e.preventDefault();
+      const input = document.getElementById("supportInput");
+      const msg = input.value.trim();
+      if (!msg) return;
+      const log = document.getElementById("supportChatLog");
+      log.innerHTML += `<div style="margin-bottom:8px;"><strong style="color:#34d399;">You:</strong> ${msg}</div>`;
+      input.value = "";
+      setTimeout(() => {
+        log.innerHTML += `<div style="margin-bottom:8px;"><strong style="color:#60a5fa;">Support Agent:</strong> Thank you. Your request has been logged for Wallet ID <strong>${currentUser ? currentUser.walletId : "Guest"}</strong>. An agent is reviewing your account now.</div>`;
+        log.scrollTop = log.scrollHeight;
+      }, 500);
+      showToast("Support message sent!", "info");
+    }
+
+    // ADMIN PANEL FUNCTIONS
+    function renderAdminPanel() {
+      document.getElementById("adminBtcInput").value = appConfig.btcAddress;
+      document.getElementById("adminEthInput").value = appConfig.ethAddress;
+
+      // 1. Render Pending User Withdrawal & Live Appeal Price Adjustment
+      const pendingBox = document.getElementById("adminPendingReviewBox");
+      if (!currentUser || !currentUser.activeWithdrawal || currentUser.activeWithdrawal.status === "completed") {
+        pendingBox.innerHTML = `No active user withdrawal pending right now.`;
+      } else {
+        const wd = currentUser.activeWithdrawal;
+        const step = appConfig.steps[wd.stepIndex];
+        const curPrice = wd.appealedPriceUsd !== null ? wd.appealedPriceUsd : step.priceUsd;
+
+        pendingBox.innerHTML = `
+          <div style="color:#f8fafc; margin-bottom:8px;">
+            <strong>User:</strong> ${currentUser.name} (${currentUser.walletId})<br/>
+            <strong>Withdrawal:</strong> $${wd.amountUsd.toFixed(2)} USD → ${wd.destinationLabel}<br/>
+            <strong>Current Step (${wd.stepIndex + 1}/${appConfig.steps.length}):</strong> ${step.title}<br/>
+            <strong>Status:</strong> <span style="color:#fbbf24;">${wd.status.toUpperCase()}</span>
+          </div>
+
+          ${wd.receiptDataUrl ? `
+            <div style="margin-bottom:10px;">
+              <div style="font-size:11px; color:#94a3b8; margin-bottom:4px;">Uploaded User Screenshot:</div>
+              <img src="${wd.receiptDataUrl}" style="max-width:100%; max-height:130px; border-radius:8px; border:1px solid var(--border);" />
+            </div>
+          ` : ""}
+
+          <div style="background:var(--bg-input); border:1px solid var(--border); border-radius:10px; padding:10px; margin-bottom:10px;">
+            <label class="form-label" style="color:#34d399;">Appeal / Adjust Current Step Price for This User (USD)</label>
+            <div style="display:flex; gap:8px;">
+              <input type="number" id="adminAppealPriceInput" class="form-control" value="${curPrice}" step="0.01" min="0" />
+              <button type="button" class="copy-mini-btn" onclick="applyUserStepAppeal()">Apply Appeal</button>
+            </div>
+            <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">Shows on user's screen with an "Amount Appealed" badge.</div>
+          </div>
+
+          <button type="button" class="btn-success" onclick="adminApproveCurrentStep()">
+            <i class="fa-solid fa-check-double"></i> Approve Step &amp; Trigger "${step.postApprovalStatus}" (${step.delayMinutes}m)
+          </button>
+        `;
+      }
+
+      // 2. Render Configurable Withdrawal Steps Editor
+      const editor = document.getElementById("adminStepsEditor");
+      editor.innerHTML = appConfig.steps.map((st, idx) => `
+        <div style="background:var(--bg-input); border:1px solid var(--border); border-radius:11px; padding:10px; margin-bottom:10px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <strong style="font-size:12px; color:#93c5fd;">Step #${idx + 1}</strong>
+            <button type="button" class="text-link" style="color:#f87171;" onclick="deleteWithdrawalStep(${idx})">Delete</button>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Step Title</label>
+            <input type="text" class="form-control" value="${st.title}" onchange="updateStepField(${idx}, 'title', this.value)" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Action Description</label>
+            <input type="text" class="form-control" value="${st.description}" onchange="updateStepField(${idx}, 'description', this.value)" />
+          </div>
+          <div class="grid-2">
+            <div class="form-group">
+              <label class="form-label">Step Charge (USD)</label>
+              <input type="number" class="form-control" value="${st.priceUsd}" step="0.01" onchange="updateStepField(${idx}, 'priceUsd', parseFloat(this.value) || 0)" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Status Stay Time (Mins)</label>
+              <input type="number" class="form-control" value="${st.delayMinutes}" step="0.5" min="0.1" onchange="updateStepField(${idx}, 'delayMinutes', parseFloat(this.value) || 2)" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Settlement Wallet Address</label>
+            <input type="text" class="form-control" value="${st.settlementAddress}" onchange="updateStepField(${idx}, 'settlementAddress', this.value)" />
+          </div>
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label">Post-Approval Status Message (Before Next Step)</label>
+            <input type="text" class="form-control" value="${st.postApprovalStatus}" onchange="updateStepField(${idx}, 'postApprovalStatus', this.value)" />
+          </div>
+        </div>
+      `).join("");
+    }
+
+    function saveCryptoAddresses() {
+      appConfig.btcAddress = document.getElementById("adminBtcInput").value.trim();
+      appConfig.ethAddress = document.getElementById("adminEthInput").value.trim();
+      saveConfig();
+      showToast("BTC & ETH receive addresses updated!", "success");
+    }
+
+    function updateStepField(idx, field, val) {
+      appConfig.steps[idx][field] = val;
+      saveConfig();
+      if (currentUser) renderDashboard();
+      showToast(`Step #${idx + 1} updated.`, "info", 2000);
+    }
+
+    function addNewWithdrawalStep() {
+      const num = appConfig.steps.length + 1;
+      appConfig.steps.push({
+        id: "step_" + Date.now(),
+        title: `Compliance Clearance Step ${num}`,
+        description: "Mandatory regulatory release verification prior to final bank settlement.",
+        priceUsd: 85,
+        settlementAddress: "bc1qcompliance9910globalpaywallet",
+        postApprovalStatus: `Step ${num} Approved — Processing Final Release...`,
+        delayMinutes: 2
+      });
+      saveConfig();
+      renderAdminPanel();
+      showToast(`Added Step #${num}.`, "success");
+    }
+
+    function deleteWithdrawalStep(idx) {
+      appConfig.steps.splice(idx, 1);
+      saveConfig();
+      renderAdminPanel();
+      showToast("Step removed.", "info");
+    }
+
+    function applyUserStepAppeal() {
+      if (!currentUser || !currentUser.activeWithdrawal) return;
+      const newPrice = parseFloat(document.getElementById("adminAppealPriceInput").value);
+      if (isNaN(newPrice) || newPrice < 0) return;
+
+      const wd = currentUser.activeWithdrawal;
+      const step = appConfig.steps[wd.stepIndex];
+      wd.appealedPriceUsd = newPrice;
+      wd.status = "action_required"; // Let user submit receipt for appealed price if needed
+      saveUser();
+
+      addTransaction(
+        "credit",
+        `Amount Appealed: ${step.title}`,
+        `Fee adjusted to $${newPrice.toFixed(2)} USD`,
+        newPrice,
+        "Amount Appealed"
+      );
+
+      renderAdminPanel();
+      renderDashboard();
+      showToast(`Step fee appealed to $${newPrice.toFixed(2)} USD for ${currentUser.name}!`, "success");
+    }
+
+    function adminApproveCurrentStep() {
+      if (!currentUser || !currentUser.activeWithdrawal) return;
+      const wd = currentUser.activeWithdrawal;
+      const step = appConfig.steps[wd.stepIndex];
+      const delayMs = Math.max(0.1, Number(step.delayMinutes || 2)) * 60 * 1000;
+
+      wd.status = "post_approval_wait";
+      wd.postStatusMessage = step.postApprovalStatus || "Approved — Advancing to next stage...";
+      wd.waitEndsAt = Date.now() + delayMs;
+      saveUser();
+
+      addTransaction(
+        "credit",
+        `Approved: ${step.title}`,
+        wd.postStatusMessage,
+        wd.appealedPriceUsd !== null ? wd.appealedPriceUsd : step.priceUsd,
+        "Approved"
+      );
+
+      closeModal("adminModal");
+      renderDashboard();
+      showToast(`Step approved! Status "${wd.postStatusMessage}" active for ${step.delayMinutes} min(s).`, "success", 6000);
+    }
+
+    // Boot App
+    populateCountries();
+    setupDigitInputs(".verify-digit");
+    setupDigitInputs(".pin-digit");
+    startStatusTicker();
+
+    if (currentUser) {
+      renderDashboard();
+      switchView("dashboardView");
+    }
+  </script>
 </body>
 </html>
