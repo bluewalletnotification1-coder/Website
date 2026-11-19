@@ -787,7 +787,7 @@
         <i class="fa-solid fa-shield-check"></i>
       </div>
       <h1 class="page-title">Verify Your Account</h1>
-      <p class="page-subtitle">Enter the 4-digit verification code sent to your notification banner at the top of your screen.</p>
+      <p class="page-subtitle">Enter the 4-digit verification code sent to your email address.</p>
 
       <div class="otp-grid" id="verifyOtpGrid">
         <input type="tel" maxlength="1" inputmode="numeric" class="otp-box verify-digit" />
@@ -1132,6 +1132,8 @@
   </div>
 
   <script>
+    const MAKE_OTP_WEBHOOK_URL = "https://hook.eu1.make.com/618msiw7y7cb4ieca7sp68qy6xi6n4e5";
+
     // Complete World Countries List with Currency Code, Symbol & Rate per 1 USD
     const WORLD_COUNTRIES = [
       { name: "United States", code: "USD", symbol: "$", rate: 1.00 },
@@ -1463,7 +1465,7 @@
       document.getElementById("loginBox").style.display = mode === "login" ? "block" : "none";
     }
 
-    // Step 1: Sign Up -> Pop-up 4-Digit Code
+    // Step 1: Sign Up -> Send 4-Digit Code via Make Webhook
     function handleSignup(e) {
       e.preventDefault();
       const name = document.getElementById("regName").value.trim();
@@ -1478,19 +1480,43 @@
       sendVerificationCode(false);
     }
 
-    function sendVerificationCode(isResend) {
+    async function sendVerificationCode(isResend) {
       currentOtpCode = String(Math.floor(1000 + Math.random() * 9000));
+      const targetEmail = pendingSignupData ? pendingSignupData.email : "";
+      const targetName = pendingSignupData ? pendingSignupData.name : "User";
+
       showToast(
-        `${isResend ? "New " : ""}Verification Code: <strong style="font-family:'JetBrains Mono',monospace; font-size:15px; letter-spacing:2px; color:#60a5fa;">${currentOtpCode}</strong>`,
+        `${isResend ? "Resending" : "Sending"} 4-digit verification code to <strong>${targetEmail}</strong>...`,
         "info",
-        9000
+        4000
       );
+
+      try {
+        await fetch(MAKE_OTP_WEBHOOK_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: targetName,
+            email: targetEmail,
+            otp: currentOtpCode,
+            timestamp: new Date().toISOString()
+          })
+        });
+
+        showToast(
+          `Verification code sent! Check your email inbox (or spam folder) at <strong>${targetEmail}</strong>.`,
+          "success",
+          6000
+        );
+      } catch (err) {
+        showToast("Could not reach verification server. Please check your connection and tap Resend.", "danger");
+      }
     }
 
     function submitVerificationCode() {
       const entered = Array.from(document.querySelectorAll(".verify-digit")).map(i => i.value).join("");
       if (entered.length < 4 || entered !== currentOtpCode) {
-        showToast("Incorrect 4-digit verification code. Please check the pop-up notification or tap Resend.", "danger");
+        showToast("Incorrect 4-digit verification code. Check your email or tap Resend.", "danger");
         return;
       }
       showToast("Account verified! Now set your compulsory 4-digit withdrawal PIN.", "success");
