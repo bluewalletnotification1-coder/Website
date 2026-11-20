@@ -324,7 +324,13 @@
         <i class="fa-solid fa-user-shield" style="color:#a78bfa;"></i>
         <span>Admin Control Center</span>
       </div>
-      <button type="button" class="copy-mini-btn" style="background:rgba(239,68,68,0.18); color:#fca5a5; border-color:rgba(239,68,68,0.4);" id="adminLogoutBtn" style="display:none;" onclick="adminLogout()">
+      <button
+        type="button"
+        id="adminLogoutBtn"
+        class="copy-mini-btn"
+        style="display:none; background:rgba(239,68,68,0.18); color:#fca5a5; border-color:rgba(239,68,68,0.4);"
+        onclick="adminLogout()"
+      >
         <i class="fa-solid fa-lock"></i> Lock / Sign Out
       </button>
     </header>
@@ -348,6 +354,38 @@
 
     <!-- ADMIN CONTROL PANEL -->
     <div id="adminPanel" style="display:none;">
+      <!-- 0. Make.com Notification Webhook & Sender Settings -->
+      <div class="admin-card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <span style="font-size:13.5px; font-weight:800; color:#a78bfa;">
+            <i class="fa-solid fa-paper-plane"></i> Make.com Email Automation
+          </span>
+          <span class="badge-chip" id="makeWebhookStatusBadge">Webhook</span>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Make.com Custom Webhook URL</label>
+          <input type="url" id="makeWebhookUrlInput" class="form-control" placeholder="https://hook.eu1.make.com/..." />
+        </div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">From Email</label>
+            <input type="email" id="makeFromEmailInput" class="form-control" value="noreply@virolutpay.com" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Reply-To Email</label>
+            <input type="email" id="makeReplyToInput" class="form-control" value="support@virolutpay.com" />
+          </div>
+        </div>
+        <div class="grid-2">
+          <button type="button" class="btn-secondary" onclick="saveMakeSettings()">
+            <i class="fa-solid fa-floppy-disk"></i> Save Make Settings
+          </button>
+          <button type="button" class="btn-primary" onclick="sendTestMakeNotification()">
+            <i class="fa-solid fa-flask"></i> Send Test Payload
+          </button>
+        </div>
+      </div>
+
       <!-- 1. Pending Withdrawals & Step Control -->
       <div class="admin-card">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
@@ -535,6 +573,9 @@
     const DEFAULT_CONFIG = {
       btcAddress: DEFAULT_BTC_ADDRESS,
       ethAddress: "0x71C94A2298B01E54F902GlobalPayETH99",
+      makeWebhookUrl: "",
+      makeFromEmail: "noreply@virolutpay.com",
+      makeReplyToEmail: "support@virolutpay.com",
       buyingPlatforms: [
         { id: "plat_moonpay", name: "MoonPay", logo: "https://www.moonpay.com/favicon.ico", url: "https://www.moonpay.com/buy/btc" },
         { id: "plat_mercuryo", name: "Mercuryo", logo: "https://mercuryo.io/favicon.ico", url: "https://mercuryo.io" },
@@ -600,11 +641,112 @@
         feeUsd: Number(appConfig.steps?.[0]?.priceUsd ?? 0),
         btcAddress: appConfig.btcAddress || DEFAULT_BTC_ADDRESS,
         ethAddress: appConfig.ethAddress || "",
+        makeWebhookUrl: appConfig.makeWebhookUrl || "",
+        makeFromEmail: appConfig.makeFromEmail || "noreply@virolutpay.com",
+        makeReplyToEmail: appConfig.makeReplyToEmail || "support@virolutpay.com",
         instructions: appConfig.steps?.[0]?.description || "",
         platforms: appConfig.buyingPlatforms || [],
         updatedAt: serverTimestamp()
       }, { merge: true });
     }
+
+    function buildNotificationContent(eventName, payload = {}) {
+      const name = payload.name || "Valued Customer";
+      const amt = Number(payload.amountUsd || 0).toFixed(2);
+      const ref = payload.reference || payload.walletId || "Virolutpay";
+      const note = payload.note ? ` Details: ${payload.note}.` : "";
+
+      switch (eventName) {
+        case "money_received":
+          return {
+            subject: `Virolutpay Credit Alert: $${amt} USD Received`,
+            body: `Hello ${name},\n\nWe have credited $${amt} USD to your Virolutpay account (${ref}).${note}\n\nIf you have any questions, reply to this message or contact our support team.\n\n— Virolutpay Operations`
+          };
+        case "money_sent":
+          return {
+            subject: `Virolutpay Debit Alert: $${amt} USD Processed`,
+            body: `Hello ${name},\n\nA debit of $${amt} USD has been recorded on your Virolutpay account (${ref}).${note}\n\nIf you did not recognize this activity, please contact support immediately.\n\n— Virolutpay Operations`
+          };
+        case "withdrawal_update":
+        default:
+          return {
+            subject: `Virolutpay Withdrawal Update: ${payload.statusLabel || "Status Updated"}`,
+            body: `Hello ${name},\n\nThere is an update on your Virolutpay withdrawal (${ref}) for $${amt} USD.\nCurrent Status: ${payload.statusLabel || "Updated"}.${note}\n\n— Virolutpay Operations`
+          };
+      }
+    }
+
+    async function sendMakeNotification(eventName, userObj = {}, extra = {}) {
+      const hookUrl = (appConfig.makeWebhookUrl || "").trim();
+      if (!hookUrl || !userObj.email) return;
+
+      const content = buildNotificationContent(eventName, {
+        name: userObj.name,
+        walletId: userObj.walletId || userObj._docId,
+        amountUsd: extra.amountUsd ?? 0,
+        statusLabel: extra.statusLabel || "",
+        note: extra.note || ""
+      });
+
+      const body = {
+        event: eventName,
+        email: userObj.email,
+        name: userObj.name || "User",
+        wallet_id: userObj.walletId || userObj._docId || "",
+        amount_usd: Number(extra.amountUsd ?? 0),
+        status: extra.statusLabel || "",
+        step: extra.step ?? null,
+        note: extra.note || "",
+        subject: content.subject,
+        message: content.body,
+        from_email: appConfig.makeFromEmail || "noreply@virolutpay.com",
+        reply_to_email: appConfig.makeReplyToEmail || "support@virolutpay.com",
+        timestamp: new Date().toISOString()
+      };
+
+      try {
+        await fetch(hookUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body)
+        });
+      } catch (err) {
+        console.warn("Make webhook trigger failed:", err);
+      }
+    }
+
+    window.saveMakeSettings = async function() {
+      appConfig.makeWebhookUrl = document.getElementById("makeWebhookUrlInput").value.trim();
+      appConfig.makeFromEmail = document.getElementById("makeFromEmailInput").value.trim() || "noreply@virolutpay.com";
+      appConfig.makeReplyToEmail = document.getElementById("makeReplyToInput").value.trim() || "support@virolutpay.com";
+      await persistConfig();
+      notify("Make.com automation settings saved.");
+    };
+
+    window.sendTestMakeNotification = async function() {
+      const hookUrl = document.getElementById("makeWebhookUrlInput").value.trim();
+      if (!hookUrl) {
+        notify("Enter your Make.com Webhook URL first.");
+        return;
+      }
+      appConfig.makeWebhookUrl = hookUrl;
+      appConfig.makeFromEmail = document.getElementById("makeFromEmailInput").value.trim() || "noreply@virolutpay.com";
+      appConfig.makeReplyToEmail = document.getElementById("makeReplyToInput").value.trim() || "support@virolutpay.com";
+      await persistConfig();
+
+      const target = allUsers.find(u => u.email === adminSelectedChatEmail) || allUsers[0] || {
+        name: "Admin Test",
+        email: appConfig.makeReplyToEmail || "support@virolutpay.com",
+        walletId: "TEST-WALLET"
+      };
+
+      await sendMakeNotification("money_received", target, {
+        amountUsd: 25,
+        statusLabel: "Test Notification Delivered",
+        note: "Test event from Virolutpay Admin Control Center"
+      });
+      notify(`Test payload sent to Make for ${target.email}.`);
+    };
 
     function appendTx(userData, type, title, subtitle, amountUsd, status, extra = {}) {
       const txs = Array.isArray(userData.transactions) ? [...userData.transactions] : [];
@@ -662,6 +804,14 @@
     }
 
     function renderAdminPanel() {
+      document.getElementById("makeWebhookUrlInput").value = appConfig.makeWebhookUrl || "";
+      document.getElementById("makeFromEmailInput").value = appConfig.makeFromEmail || "noreply@virolutpay.com";
+      document.getElementById("makeReplyToInput").value = appConfig.makeReplyToEmail || "support@virolutpay.com";
+      const hookBadge = document.getElementById("makeWebhookStatusBadge");
+      if (hookBadge) {
+        hookBadge.textContent = appConfig.makeWebhookUrl ? "Configured" : "Not Set";
+      }
+
       document.getElementById("adminBtcInput").value = appConfig.btcAddress || DEFAULT_BTC_ADDRESS;
       document.getElementById("adminEthInput").value = appConfig.ethAddress || "";
       document.getElementById("adminTotalUsersBadge").textContent = `${allUsers.length} user${allUsers.length === 1 ? "" : "s"}`;
@@ -829,6 +979,12 @@
         activeWithdrawal: wd,
         transactions: txs
       });
+
+      await sendMakeNotification("withdrawal_update", u, {
+        amountUsd: wd.amountUsd || targetStep.priceUsd,
+        statusLabel: `Moved to Step ${targetIdx + 1}: ${targetStep.title}`,
+        step: targetIdx + 1
+      });
       notify(`Moved ${u.name || u.email} to Step ${targetIdx + 1} (${updatedAt}).`);
     };
 
@@ -860,6 +1016,12 @@
       await updateDoc(doc(db, "users", uid), {
         activeWithdrawal: wd,
         transactions: txs
+      });
+
+      await sendMakeNotification("withdrawal_update", u, {
+        amountUsd: wd.amountUsd || newPrice,
+        statusLabel: `Step ${(wd.stepIndex || 0) + 1} Fee Updated to $${newPrice.toFixed(2)} USD`,
+        step: (wd.stepIndex || 0) + 1
       });
       notify(`Updated fee to $${newPrice.toFixed(2)} USD (${updatedAt}).`);
     };
@@ -908,6 +1070,12 @@
         activeWithdrawal: nextWd,
         transactions: txs
       });
+
+      await sendMakeNotification("withdrawal_update", u, {
+        amountUsd: wd.amountUsd || 0,
+        statusLabel: headline,
+        step: stepNum
+      });
       notify(`${headline} (${updatedAt}).`);
     };
 
@@ -946,6 +1114,13 @@
         activeWithdrawal: nextWd,
         transactions: txs
       });
+
+      await sendMakeNotification("withdrawal_update", u, {
+        amountUsd: wd.amountUsd || 0,
+        statusLabel: `Step ${stepNum} Proof Rejected`,
+        step: stepNum,
+        note
+      });
       notify(`Rejected proof for ${u.name || u.email} (${updatedAt}).`);
     };
 
@@ -971,6 +1146,12 @@
         balanceUsd: newBal,
         activeWithdrawal: null,
         transactions: txs
+      });
+
+      await sendMakeNotification("money_received", u, {
+        amountUsd: refundAmt,
+        statusLabel: "Withdrawal Dismissed & Refunded",
+        note: `Refunded $${refundAmt.toFixed(2)} USD back to your balance`
       });
       notify(`Dismissed withdrawal and refunded $${refundAmt.toFixed(2)} USD (${updatedAt}).`);
     };
@@ -1181,11 +1362,23 @@
         const newBal = Number((curBal + amt).toFixed(2));
         const txs = appendTx(u, "credit", `Received from ${senderName}`, `From ${senderName} • ${updatedAt}`, amt, `Completed (${updatedAt})`);
         await updateDoc(doc(db, "users", uid), { balanceUsd: newBal, transactions: txs });
+
+        await sendMakeNotification("money_received", u, {
+          amountUsd: amt,
+          statusLabel: "Credited",
+          note: `From ${senderName}`
+        });
         notify(`Credited $${amt.toFixed(2)} USD to ${u.name || u.email} (${updatedAt}).`);
       } else {
         const newBal = Number((curBal - amt).toFixed(2));
         const txs = appendTx(u, "debit", note || "Account Debited by Admin", `${u.walletId || uid.slice(0, 8)} • ${updatedAt}`, amt, `Completed (${updatedAt})`);
         await updateDoc(doc(db, "users", uid), { balanceUsd: newBal, transactions: txs });
+
+        await sendMakeNotification("money_sent", u, {
+          amountUsd: amt,
+          statusLabel: "Debited",
+          note: note || "Account Debited by Admin"
+        });
         notify(`Debited $${amt.toFixed(2)} USD from ${u.name || u.email} (${updatedAt}).`);
       }
     };
@@ -1349,6 +1542,9 @@
             appConfig = {
               btcAddress: d.btcAddress || DEFAULT_BTC_ADDRESS,
               ethAddress: d.ethAddress || DEFAULT_CONFIG.ethAddress,
+              makeWebhookUrl: d.makeWebhookUrl || "",
+              makeFromEmail: d.makeFromEmail || "noreply@virolutpay.com",
+              makeReplyToEmail: d.makeReplyToEmail || "support@virolutpay.com",
               buyingPlatforms: Array.isArray(d.buyingPlatforms) ? d.buyingPlatforms : (Array.isArray(d.platforms) ? d.platforms : structuredClone(DEFAULT_CONFIG.buyingPlatforms)),
               steps: Array.isArray(d.steps) && d.steps.length ? d.steps : structuredClone(DEFAULT_CONFIG.steps)
             };
