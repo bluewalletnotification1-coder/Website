@@ -308,55 +308,56 @@
       text-underline-offset: 2px;
     }
 
-    .signup-showcase {
-      margin-top: 20px;
-      display: grid;
-      gap: 10px;
+    .signup-highlights {
+      margin-top: 26px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border);
+      text-align: center;
     }
 
-    .showcase-card {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 12px 13px;
-      display: flex;
-      align-items: center;
-      gap: 12px;
+    .trust-badge-block {
+      margin-bottom: 18px;
     }
 
-    .showcase-icon {
-      width: 36px;
-      height: 36px;
-      border-radius: 10px;
-      background: rgba(59, 130, 246, 0.16);
-      color: #60a5fa;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 14px;
-      flex-shrink: 0;
-    }
-
-    .showcase-icon.receive {
-      background: rgba(16, 185, 129, 0.16);
-      color: #34d399;
-    }
-
-    .showcase-icon.withdraw {
-      background: rgba(245, 158, 11, 0.16);
+    .trust-badge-icon {
+      font-size: 20px;
       color: #fbbf24;
+      margin-bottom: 6px;
     }
 
-    .showcase-title {
+    .trust-badge-text {
       font-size: 13px;
+      font-weight: 700;
+      color: #e2e8f0;
+    }
+
+    .highlights-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-top: 8px;
+    }
+
+    .highlight-item {
+      padding: 8px 4px;
+    }
+
+    .highlight-icon {
+      font-size: 18px;
+      color: #60a5fa;
+      margin-bottom: 7px;
+    }
+
+    .highlight-label {
+      font-size: 12.5px;
       font-weight: 700;
       color: var(--text-main);
     }
 
-    .showcase-desc {
-      font-size: 12px;
+    .highlight-note {
+      font-size: 11px;
       color: var(--text-muted);
-      margin-top: 1px;
+      margin-top: 3px;
     }
 
     .otp-grid {
@@ -957,32 +958,32 @@
           </button>
         </form>
 
-        <div class="signup-showcase">
-          <div class="showcase-card">
-            <div class="showcase-icon"><i class="fa-solid fa-paper-plane"></i></div>
-            <div>
-              <div class="showcase-title">Send Money</div>
-              <div class="showcase-desc">Send funds quickly by Wallet ID or email.</div>
-            </div>
-          </div>
-          <div class="showcase-card">
-            <div class="showcase-icon receive"><i class="fa-solid fa-qrcode"></i></div>
-            <div>
-              <div class="showcase-title">Receive Money</div>
-              <div class="showcase-desc">Receive funds in your wallet with instant alerts.</div>
-            </div>
-          </div>
-          <div class="showcase-card">
-            <div class="showcase-icon withdraw"><i class="fa-solid fa-building-columns"></i></div>
-            <div>
-              <div class="showcase-title">Withdraw Money</div>
-              <div class="showcase-desc">withdrawal is very easy and swift</div>
-            </div>
-          </div>
-        </div>
-
         <div style="text-align:center; margin-top:16px; font-size:13px; color:var(--text-muted);">
           Already have an account? <button type="button" class="text-link" onclick="toggleAuthMode('login')">Sign In</button>
+        </div>
+
+        <div class="signup-highlights">
+          <div class="trust-badge-block">
+            <div class="trust-badge-icon"><i class="fa-solid fa-shield-halved"></i></div>
+            <div class="trust-badge-text">Trusted by many</div>
+          </div>
+          <div class="highlights-grid">
+            <div class="highlight-item">
+              <div class="highlight-icon"><i class="fa-solid fa-paper-plane"></i></div>
+              <div class="highlight-label">Send money</div>
+              <div class="highlight-note">Instant wallet transfers</div>
+            </div>
+            <div class="highlight-item">
+              <div class="highlight-icon"><i class="fa-solid fa-arrow-down-to-bracket"></i></div>
+              <div class="highlight-label">Receive money</div>
+              <div class="highlight-note">Easy wallet &amp; ID credit</div>
+            </div>
+            <div class="highlight-item">
+              <div class="highlight-icon"><i class="fa-solid fa-bolt"></i></div>
+              <div class="highlight-label">Withdraw money</div>
+              <div class="highlight-note">withdrawal is swift</div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -1747,7 +1748,7 @@
       }
     }
 
-    function resolveCreditSenderName(tx, profile) {
+    function resolveCreditSenderName(tx) {
       const explicitSender = tx?.senderName || tx?.sender_name || tx?.creditedBy;
       if (explicitSender && String(explicitSender).trim()) {
         return String(explicitSender).trim();
@@ -2000,7 +2001,7 @@
             seenCreditTxIds.add(tx.id);
             const amtUsd = Number(tx.amountUsd || 0);
             const c = profile.country || WORLD_COUNTRIES[0];
-            const senderName = resolveCreditSenderName(tx, profile);
+            const senderName = resolveCreditSenderName(tx);
             showToast(`Received $${amtUsd.toFixed(2)} USD from ${senderName}.`, "success", 5000);
             await sendMakeNotification({
               type: "money_received",
