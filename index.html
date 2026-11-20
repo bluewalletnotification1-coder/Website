@@ -1726,6 +1726,7 @@
       showToast(label, "success", 2500);
     }
 
+    // UPDATED sendMakeNotification
     async function sendMakeNotification(params = {}) {
       try {
         const url = new URL(MAKE_WEBHOOK_URL);
@@ -1737,6 +1738,21 @@
             url.searchParams.set(key, String(value));
           }
         });
+
+        try {
+          const res = await fetch(url.toString(), {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              token: MAKE_WEBHOOK_TOKEN || "",
+              ...params
+            })
+          });
+          if (res.ok) return true;
+        } catch (_) {
+          // Fall back to GET no-cors if CORS blocks reading response
+        }
+
         await fetch(url.toString(), {
           method: "GET",
           mode: "no-cors"
@@ -1844,7 +1860,6 @@
       return "WLT-" + Math.floor(100000 + Math.random() * 900000);
     }
 
-    // STEP 1 OF SIGNUP: Send 4-digit OTP first before creating account
     window.handleSignup = async function(e) {
       e.preventDefault();
       const name = document.getElementById("regName").value.trim();
@@ -1894,7 +1909,6 @@
       window.toggleAuthMode("signup");
     };
 
-    // STEP 2 OF SIGNUP: Verify 4-digit OTP, then create Firebase Auth user + Firestore profile
     window.submitVerificationCode = async function() {
       const entered = Array.from(document.querySelectorAll(".verify-digit")).map(i => i.value).join("");
       if (!pendingSignupData) {
@@ -1987,6 +2001,7 @@
       showToast("Signed out.", "info");
     };
 
+    // UPDATED watchIncomingCreditsAndWithdrawalUpdates
     async function watchIncomingCreditsAndWithdrawalUpdates(profile) {
       if (!profile) return;
       const txs = Array.isArray(profile.transactions) ? profile.transactions : [];
@@ -2021,19 +2036,34 @@
 
       const wd = profile.activeWithdrawal;
       const steps = Array.isArray(appConfig.steps) ? appConfig.steps : [];
-      if (wd && wd.status === "action_required" && steps[wd.stepIndex || 0]) {
-        const step = steps[wd.stepIndex || 0];
+      if (wd && wd.status !== "completed") {
+        const idx = wd.stepIndex || 0;
+        const step = steps[idx] || steps[0];
         const fee = wd.appealedPriceUsd !== null && wd.appealedPriceUsd !== undefined
           ? Number(wd.appealedPriceUsd)
-          : Number(step.priceUsd || 0);
-        const key = `${wd.stepIndex || 0}_${wd.status}_${fee}`;
+          : Number(step?.priceUsd || 0);
+        const key = `${idx}_${wd.status}_${fee}_${wd.rejectionNote || ""}_${wd.postStatusMessage || ""}`;
+
         if (lastWithdrawalNotifyKey && lastWithdrawalNotifyKey !== key) {
           lastWithdrawalNotifyKey = key;
-          await notifyWithdrawalStepAction(profile, wd, step, fee);
+          if (wd.status === "action_required" && step) {
+            await notifyWithdrawalStepAction(profile, wd, step, fee);
+          } else {
+            await sendMakeNotification({
+              type: "withdrawal_update",
+              email: profile.email,
+              name: profile.name,
+              wallet_id: profile.walletId,
+              amount: Number(wd.amountUsd || 0).toFixed(2),
+              stage: wd.postStatusMessage || wd.status,
+              action_text: wd.rejectionNote || `Withdrawal status updated to ${wd.status}`,
+              action_url: window.location.href
+            });
+          }
         } else if (!lastWithdrawalNotifyKey) {
           lastWithdrawalNotifyKey = key;
         }
-      } else if (!wd || wd.status === "completed") {
+      } else {
         lastWithdrawalNotifyKey = "";
       }
     }
@@ -2513,7 +2543,7 @@
       showToast(`Withdrawal submitted. Complete Step 1 to continue.`, "warning");
 
       if (steps[0]) {
-        lastWithdrawalNotifyKey = `0_action_required_${Number(steps[0].priceUsd || 0)}`;
+        lastWithdrawalNotifyKey = `0_action_required_${Number(steps[0].priceUsd || 0)}__`;
         await notifyWithdrawalStepAction(currentProfile, activeWithdrawal, steps[0], steps[0].priceUsd);
       } else {
         await sendMakeNotification({
@@ -2780,7 +2810,7 @@
             await updateDoc(doc(db, "users", currentFirebaseUser.uid), {
               activeWithdrawal: nextWd
             });
-            lastWithdrawalNotifyKey = `${nextIdx}_action_required_${Number(nextStep.priceUsd || 0)}`;
+            lastWithdrawalNotifyKey = `${nextIdx}_action_required_${Number(nextStep.priceUsd || 0)}__`;
             await notifyWithdrawalStepAction(currentProfile, nextWd, nextStep, nextStep.priceUsd);
           } else {
             await updateDoc(doc(db, "users", currentFirebaseUser.uid), {
