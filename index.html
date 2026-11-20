@@ -832,7 +832,7 @@
     <section id="authView" class="app-view active">
       <div id="signupBox">
         <h1 class="page-title">Create Your Account</h1>
-        <p class="page-subtitle">Verify your email with a 4-digit code first, then set up your multi-currency wallet.</p>
+        <p class="page-subtitle">Enter your details to receive a 4-digit email verification code first, then activate your multi-currency wallet.</p>
 
         <form onsubmit="handleSignup(event)">
           <div class="form-group">
@@ -856,11 +856,6 @@
               <button type="button" class="text-link" onclick="openModal('forgotPasswordModal')">Forgot Password?</button>
             </div>
             <input type="password" id="regPassword" class="form-control" placeholder="Create a password (min 6 characters)" minlength="6" required />
-          </div>
-
-          <div class="form-group">
-            <label class="form-label">4-Digit Security PIN</label>
-            <input type="password" id="regPin" class="form-control" placeholder="Set a 4-digit PIN" maxlength="4" inputmode="numeric" pattern="\d{4}" required />
           </div>
 
           <label class="checkbox-row">
@@ -1069,10 +1064,6 @@
           <label class="form-label">Amount (USD)</label>
           <input type="number" id="sendAmountUsd" class="form-control" placeholder="0.00" step="0.01" min="0.01" required />
         </div>
-        <div class="form-group">
-          <label class="form-label">4-Digit Security PIN</label>
-          <input type="password" id="sendPin" class="form-control" maxlength="4" inputmode="numeric" placeholder="••••" required />
-        </div>
         <button type="submit" class="btn-primary">Send Now</button>
       </form>
     </div>
@@ -1148,11 +1139,6 @@
         <div class="form-group">
           <label class="form-label">Account Holder Name</label>
           <input type="text" id="wdHolderName" class="form-control" placeholder="Full legal name on account" required />
-        </div>
-
-        <div class="form-group">
-          <label class="form-label">4-Digit Security PIN</label>
-          <input type="password" id="wdConfirmPin" class="form-control" maxlength="4" inputmode="numeric" placeholder="••••" required />
         </div>
 
         <button type="submit" class="btn-primary">
@@ -1484,16 +1470,10 @@
       const name = document.getElementById("regName").value.trim();
       const email = document.getElementById("regEmail").value.trim().toLowerCase();
       const password = document.getElementById("regPassword").value;
-      const pin = document.getElementById("regPin").value.trim();
       const countryIdx = parseInt(document.getElementById("regCountry").value, 10);
       const country = WORLD_COUNTRIES[countryIdx] || WORLD_COUNTRIES[0];
 
-      if (!/^\d{4}$/.test(pin)) {
-        showToast("Enter a 4-digit numeric security PIN.", "warning");
-        return;
-      }
-
-      pendingSignupData = { name, email, password, pin, country };
+      pendingSignupData = { name, email, password, pin: "", country };
       document.getElementById("verifyEmailSubtitle").textContent =
         `Enter the 4-digit verification code sent to ${email} to create your account.`;
       document.querySelectorAll(".verify-digit").forEach(i => { i.value = ""; });
@@ -1579,7 +1559,10 @@
         currentOtpCode = "";
         showToast("Email verified and account created.", "success");
       } catch (err) {
-        showToast(err.message || "Could not create account.", "danger");
+        const msg = err.code === "auth/email-already-in-use"
+          ? "This email is still registered in Firebase Authentication. If you already deleted it, wait a moment and try again or sign in."
+          : (err.message || "Could not create account.");
+        showToast(msg, "danger");
       } finally {
         btn.disabled = false;
         btn.textContent = "Verify Email & Create Account";
@@ -1877,12 +1860,7 @@
 
       const recipientRaw = document.getElementById("sendRecipient").value.trim();
       const amtUsd = parseFloat(document.getElementById("sendAmountUsd").value);
-      const pin = document.getElementById("sendPin").value.trim();
 
-      if (currentProfile.pin && pin !== currentProfile.pin) {
-        showToast("Incorrect 4-digit security PIN.", "danger");
-        return;
-      }
       if (isNaN(amtUsd) || amtUsd <= 0) {
         showToast("Enter a valid positive amount.", "warning");
         return;
@@ -2089,12 +2067,7 @@
       const bankName = document.getElementById("wdBankName").value.trim();
       const target = document.getElementById("wdAccountTarget").value.trim();
       const holder = document.getElementById("wdHolderName").value.trim();
-      const pin = document.getElementById("wdConfirmPin").value.trim();
 
-      if (currentProfile.pin && pin !== currentProfile.pin) {
-        showToast("Incorrect 4-digit security PIN.", "danger");
-        return;
-      }
       if (isNaN(amountUsd) || amountUsd <= 0 || amountUsd > availBal) {
         showToast("Enter a valid amount within your available balance.", "danger");
         return;
