@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>GlobalPay — Send & Receive Money Wallet</title>
-  <meta name="description" content="GlobalPay multi-currency wallet for sending and receiving money across supported currencies." />
+  <title>Virolutpay — Send & Receive Money Wallet</title>
+  <meta name="description" content="Virolutpay multi-currency wallet for sending and receiving money across supported currencies." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet" />
@@ -659,7 +659,7 @@
     <header class="top-header">
       <div class="brand-logo">
         <div class="brand-icon"><i class="fa-solid fa-wallet"></i></div>
-        <span>GlobalPay</span>
+        <span>Virolutpay</span>
       </div>
       <div class="header-actions">
         <button class="header-btn" onclick="openSupportModal()">
@@ -676,7 +676,7 @@
     <section id="authView" class="app-view active">
       <div id="signupBox">
         <h1 class="page-title">Send &amp; Receive Money</h1>
-        <p class="page-subtitle">Create an account to send and receive money across your local currency and USD, EUR, and GBP wallets from any device.</p>
+        <p class="page-subtitle">Create your Virolutpay account to send and receive money across your local currency and USD, EUR, and GBP wallets from any device.</p>
 
         <form onsubmit="handleSignup(event)">
           <div class="form-group">
@@ -704,7 +704,7 @@
 
           <label class="checkbox-row">
             <input type="checkbox" id="regTerms" required />
-            <span>I agree to the GlobalPay Terms &amp; Conditions and Privacy Policy.</span>
+            <span>I agree to the Virolutpay Terms &amp; Conditions and Privacy Policy.</span>
           </label>
 
           <button type="submit" class="btn-primary">
@@ -719,7 +719,7 @@
 
       <div id="loginBox" style="display:none;">
         <h1 class="page-title">Welcome Back</h1>
-        <p class="page-subtitle">Sign in from any device to access your wallet balance and transfers.</p>
+        <p class="page-subtitle">Sign in from any device to access your Virolutpay wallet balance and transfers.</p>
 
         <form onsubmit="handleLogin(event)">
           <div class="form-group">
@@ -739,7 +739,7 @@
         </form>
 
         <div style="text-align:center; margin-top:16px; font-size:13px; color:var(--text-muted);">
-          New to GlobalPay? <button type="button" class="text-link" onclick="toggleAuthMode('signup')">Create Wallet</button>
+          New to Virolutpay? <button type="button" class="text-link" onclick="toggleAuthMode('signup')">Create Wallet</button>
         </div>
       </div>
     </section>
@@ -819,7 +819,7 @@
         <span class="modal-title">Receive Money</span>
         <button class="close-btn" onclick="closeModal('receiveModal')"><i class="fa-solid fa-xmark"></i></button>
       </div>
-      <p style="font-size:12.5px; color:var(--text-muted);">Share your Wallet ID or email address so others can send money directly to your account.</p>
+      <p style="font-size:12.5px; color:var(--text-muted);">Share your Virolutpay Wallet ID or email address so others can send money directly to your account.</p>
       <label class="form-label" style="margin-top:10px;">Your Wallet ID</label>
       <div class="address-box">
         <span class="address-text" id="recWalletIdVal">WLT-000000</span>
@@ -897,7 +897,7 @@
           <div style="display:flex; align-items:center; gap:9px;">
             <div class="chat-avatar"><i class="fa-solid fa-headset"></i></div>
             <div>
-              <div style="font-size:13px; font-weight:800;">GlobalPay Support</div>
+              <div style="font-size:13px; font-weight:800;">Virolutpay Support</div>
               <div style="font-size:10.5px; color:#34d399;"><i class="fa-solid fa-circle" style="font-size:7px;"></i> Online</div>
             </div>
           </div>
@@ -918,11 +918,11 @@
   <div id="homeScreenGuideModal" class="app-modal">
     <div class="modal-sheet">
       <div class="modal-header">
-        <span class="modal-title">Add to Home Screen</span>
+        <span class="modal-title">Add Virolutpay to Home Screen</span>
         <button class="close-btn" onclick="dismissHomeScreenGuide()"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <p style="font-size:12.5px; color:var(--text-muted); margin-bottom:12px;">
-        Optional tip: save GlobalPay to your Home Screen for quick access. You can continue right away.
+        Optional tip: save Virolutpay to your Home Screen for quick access. You can continue right away.
       </p>
       <div class="guide-box">
         <div style="font-size:13px; font-weight:800; color:#34d399; margin-bottom:4px;">
@@ -971,12 +971,13 @@
     } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 
     const FIREBASE_CONFIG = {
-      apiKey: "YOUR_FIREBASE_API_KEY",
-      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-      projectId: "YOUR_PROJECT_ID",
-      storageBucket: "YOUR_PROJECT_ID.appspot.com",
-      messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-      appId: "YOUR_FIREBASE_APP_ID"
+      apiKey: "AIzaSyCKmSHJjGdM8Z2Upvn9qRs2wrCcMhdUQDM",
+      authDomain: "virolutpay.firebaseapp.com",
+      projectId: "virolutpay",
+      storageBucket: "virolutpay.firebasestorage.app",
+      messagingSenderId: "953105119053",
+      appId: "1:953105119053:web:0c64f58cd968bb4beba904",
+      measurementId: "G-1GM91NDXKN"
     };
 
     const app = initializeApp(FIREBASE_CONFIG);
@@ -1099,7 +1100,7 @@
           supportMessages: [
             {
               sender: "support",
-              text: "Welcome to GlobalPay! You can send and receive money using your Wallet ID or email.",
+              text: "Welcome to Virolutpay! You can send and receive money using your Wallet ID or email.",
               time: nowStr,
               readByUser: false
             }
