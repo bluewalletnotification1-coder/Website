@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <meta name="robots" content="noindex, nofollow" />
-  <title>Virolutpay Console</title>
+  <title>Virolutpay Operations — Admin Control Center</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet" />
@@ -25,28 +25,33 @@
       --danger: #ef4444;
     }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
     body {
       background: var(--bg-primary);
       color: var(--text-main);
       font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
       min-height: 100vh;
-      padding-bottom: 60px;
+      padding-bottom: 70px;
+      line-height: 1.45;
     }
 
     .shell {
-      max-width: 680px;
+      max-width: 560px;
       margin: 0 auto;
-      padding: 16px;
+      padding: 14px;
     }
 
     .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 50;
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 10px;
-      background: var(--bg-secondary);
+      background: rgba(15, 23, 42, 0.94);
+      backdrop-filter: blur(12px);
       border: 1px solid var(--border);
       border-radius: 14px;
       padding: 12px 14px;
@@ -55,33 +60,29 @@
 
     .brand {
       font-weight: 800;
-      font-size: 16px;
+      font-size: 15.5px;
       display: flex;
       align-items: center;
       gap: 8px;
     }
 
-    .card {
+    .admin-card {
       background: var(--bg-card);
       border: 1px solid var(--border);
       border-radius: 16px;
-      padding: 16px;
+      padding: 14px;
       margin-bottom: 14px;
     }
 
-    .card-title {
-      font-size: 15px;
-      font-weight: 800;
-      margin-bottom: 4px;
+    .admin-subbox {
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 11px;
+      margin-bottom: 10px;
     }
 
-    .card-sub {
-      font-size: 12px;
-      color: var(--text-muted);
-      margin-bottom: 14px;
-    }
-
-    .form-group { margin-bottom: 12px; }
+    .form-group { margin-bottom: 11px; }
 
     .form-label {
       display: block;
@@ -105,25 +106,24 @@
 
     .form-control:focus { border-color: var(--border-focus); }
 
-    textarea.form-control { min-height: 78px; resize: vertical; }
-
     .grid-2 {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 10px;
+      gap: 8px;
     }
 
-    @media (max-width: 540px) {
+    @media (max-width: 480px) {
       .grid-2 { grid-template-columns: 1fr; }
     }
 
     .btn-primary {
+      width: 100%;
       background: linear-gradient(135deg, #3b82f6, #2563eb);
       color: #fff;
       border: none;
       border-radius: 11px;
-      padding: 11px 14px;
-      font-size: 13px;
+      padding: 12px 14px;
+      font-size: 13.5px;
       font-weight: 700;
       cursor: pointer;
       display: inline-flex;
@@ -132,51 +132,185 @@
       gap: 7px;
     }
 
-    .btn-sm {
-      background: rgba(59, 130, 246, 0.16);
-      color: #93c5fd;
-      border: 1px solid rgba(59, 130, 246, 0.35);
-      border-radius: 8px;
-      padding: 7px 10px;
-      font-size: 11.5px;
+    .btn-success {
+      width: 100%;
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 12.5px;
       font-weight: 700;
       cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
     }
 
     .btn-danger {
-      background: rgba(239, 68, 68, 0.15);
-      color: #fca5a5;
-      border: 1px solid rgba(239, 68, 68, 0.35);
-      border-radius: 9px;
-      padding: 8px 12px;
+      width: 100%;
+      background: linear-gradient(135deg, #ef4444, #dc2626);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 12.5px;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .btn-secondary {
+      width: 100%;
+      background: var(--bg-card);
+      color: var(--text-main);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 12.5px;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .copy-mini-btn {
+      background: rgba(59, 130, 246, 0.2);
+      color: #60a5fa;
+      border: 1px solid rgba(59, 130, 246, 0.35);
+      border-radius: 8px;
+      padding: 7px 11px;
+      font-size: 11.5px;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .text-link {
+      background: none;
+      border: none;
+      color: #60a5fa;
       font-size: 12px;
       font-weight: 700;
       cursor: pointer;
+      padding: 0;
     }
 
-    .user-row {
+    .badge-chip {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 9px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      background: rgba(59, 130, 246, 0.16);
+      color: #93c5fd;
+    }
+
+    .fb-chat-shell {
       background: var(--bg-input);
       border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 12px;
-      margin-bottom: 10px;
+      border-radius: 14px;
+      overflow: hidden;
     }
 
-    .mono { font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: #93c5fd; }
+    .fb-thread-header {
+      background: #14203b;
+      border-bottom: 1px solid var(--border);
+      padding: 10px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .fb-avatar {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+      color: #fff;
+      font-weight: 800;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .fb-messages-area {
+      height: 220px;
+      overflow-y: auto;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .fb-msg-row { display: flex; flex-direction: column; max-width: 82%; }
+    .fb-msg-row.incoming { align-self: flex-start; }
+    .fb-msg-row.outgoing { align-self: flex-end; }
+
+    .fb-bubble {
+      padding: 9px 12px;
+      border-radius: 16px;
+      font-size: 12.5px;
+      line-height: 1.4;
+      word-break: break-word;
+    }
+
+    .fb-msg-row.incoming .fb-bubble {
+      background: #1e293b;
+      color: #f8fafc;
+      border-bottom-left-radius: 4px;
+    }
+
+    .fb-msg-row.outgoing .fb-bubble {
+      background: #2563eb;
+      color: #ffffff;
+      border-bottom-right-radius: 4px;
+    }
+
+    .fb-time {
+      font-size: 10px;
+      color: var(--text-muted);
+      margin-top: 2px;
+      padding: 0 4px;
+    }
+
+    .fb-msg-row.outgoing .fb-time { text-align: right; }
+
+    .fb-composer {
+      display: flex;
+      gap: 8px;
+      padding: 10px;
+      background: #0d1528;
+      border-top: 1px solid var(--border);
+    }
 
     #toast {
       position: fixed;
       top: 14px;
-      right: 14px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: calc(100% - 28px);
+      max-width: 520px;
       z-index: 9999;
       background: #1e293b;
       border: 1px solid rgba(59, 130, 246, 0.5);
+      border-left: 4px solid var(--accent);
       color: #fff;
       padding: 11px 14px;
       border-radius: 11px;
       font-size: 12.5px;
       display: none;
-      max-width: 340px;
       box-shadow: 0 12px 24px rgba(0, 0, 0, 0.5);
     }
   </style>
@@ -185,20 +319,20 @@
   <div id="toast"></div>
 
   <div class="shell">
-    <div class="topbar">
+    <header class="topbar">
       <div class="brand">
-        <i class="fa-solid fa-shield-halved" style="color:#60a5fa;"></i>
-        <span>Virolutpay Operations</span>
+        <i class="fa-solid fa-user-shield" style="color:#a78bfa;"></i>
+        <span>Admin Control Center</span>
       </div>
-      <button class="btn-danger" id="adminLogoutBtn" style="display:none;" onclick="adminLogout()">
-        <i class="fa-solid fa-right-from-bracket"></i> Sign Out
+      <button type="button" class="copy-mini-btn" style="background:rgba(239,68,68,0.18); color:#fca5a5; border-color:rgba(239,68,68,0.4);" id="adminLogoutBtn" style="display:none;" onclick="adminLogout()">
+        <i class="fa-solid fa-lock"></i> Lock / Sign Out
       </button>
-    </div>
+    </header>
 
     <!-- ADMIN LOGIN -->
-    <div class="card" id="adminLoginCard">
-      <div class="card-title">Operator Sign In</div>
-      <div class="card-sub">Sign in with your authorized Firebase admin account.</div>
+    <div class="admin-card" id="adminLoginCard">
+      <div style="font-size:17px; font-weight:800; margin-bottom:4px;">Admin Portal Login</div>
+      <div style="font-size:12.5px; color:var(--text-muted); margin-bottom:14px;">Sign in with your authorized Firebase admin account.</div>
       <form onsubmit="handleAdminLogin(event)">
         <div class="form-group">
           <label class="form-label">Admin Email</label>
@@ -208,52 +342,158 @@
           <label class="form-label">Password</label>
           <input type="password" id="adminPassword" class="form-control" required />
         </div>
-        <button type="submit" class="btn-primary" style="width:100%;">Sign In to Console</button>
+        <button type="submit" class="btn-primary">Sign In to Admin Panel</button>
       </form>
     </div>
 
-    <!-- ADMIN PANEL -->
+    <!-- ADMIN CONTROL PANEL -->
     <div id="adminPanel" style="display:none;">
-      <div class="card">
-        <div class="card-title">Payout &amp; Withdrawal Configuration</div>
-        <div class="card-sub">Stored in Firestore (`settings/payoutConfig`) and loaded by signed-in users.</div>
-        <form onsubmit="savePayoutConfig(event)">
-          <div class="grid-2">
-            <div class="form-group">
-              <label class="form-label">Active Withdrawal Step</label>
-              <input type="number" id="cfgStep" class="form-control" min="1" max="10" value="1" required />
-            </div>
-            <div class="form-group">
-              <label class="form-label">Withdrawal Fee (USD)</label>
-              <input type="number" id="cfgFeeUsd" class="form-control" step="0.01" min="0" value="0" required />
-            </div>
-          </div>
+      <!-- 1. Pending Withdrawals & Step Control -->
+      <div class="admin-card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <span style="font-size:13.5px; font-weight:800; color:#fbbf24;">
+            <i class="fa-solid fa-clock-rotate-left"></i> Pending Withdrawals &amp; Step Control
+          </span>
+          <span class="badge-chip" id="adminPendingCountBadge">0 pending</span>
+        </div>
 
-          <div class="form-group">
-            <label class="form-label">Receiving Wallet / Address</label>
-            <input type="text" id="cfgBtcAddress" class="form-control" placeholder="Enter wallet address" />
-          </div>
+        <div class="form-group" style="margin-bottom:10px;">
+          <input
+            type="search"
+            id="adminPendingSearchInput"
+            class="form-control"
+            placeholder="Search pending withdrawal by user email..."
+            oninput="handleAdminPendingSearch(this.value)"
+          />
+        </div>
 
-          <div class="form-group">
-            <label class="form-label">Step Instructions</label>
-            <textarea id="cfgInstructions" class="form-control" placeholder="Instructions shown to signed-in users during withdrawal..."></textarea>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label">Supported Platforms (one per line: Name | URL)</label>
-            <textarea id="cfgPlatforms" class="form-control" placeholder="Example Platform | https://example.com"></textarea>
-          </div>
-
-          <button type="submit" class="btn-primary">
-            <i class="fa-solid fa-floppy-disk"></i> Save Configuration
+        <div id="adminPendingListBox" style="font-size:12.5px; color:var(--text-muted);">
+          No pending withdrawals right now.
+        </div>
+        <div id="adminPendingSeeMoreWrap" style="margin-top:8px; display:none;">
+          <button type="button" class="btn-secondary" id="adminPendingSeeMoreBtn" onclick="toggleAdminShowAllPending()">
+            See More Withdrawals
           </button>
-        </form>
+        </div>
       </div>
 
-      <div class="card">
-        <div class="card-title">User Accounts &amp; Balances</div>
-        <div class="card-sub">Adjust user USD balance, set withdrawal stage, or send support replies.</div>
-        <div id="usersList">Loading users...</div>
+      <!-- 2. Support Messages (Live Messenger) -->
+      <div class="admin-card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <span style="font-size:13.5px; font-weight:800; color:#34d399;">
+            <i class="fa-solid fa-comments"></i> Support Messages (Live Messenger)
+          </span>
+          <span class="badge-chip" id="adminChatUnreadChip">0 unread</span>
+        </div>
+
+        <div class="form-group" style="margin-bottom:10px;">
+          <label class="form-label">Select Conversation</label>
+          <select id="adminSupportTargetEmail" class="form-control" onchange="handleAdminSelectChatUser(this.value)"></select>
+        </div>
+
+        <div class="fb-chat-shell">
+          <div class="fb-thread-header">
+            <div style="display:flex; align-items:center; gap:9px;">
+              <div class="fb-avatar" id="adminChatPeerAvatar">U</div>
+              <div>
+                <div style="font-size:13px; font-weight:800;" id="adminChatPeerName">Select a User</div>
+                <div style="font-size:10.5px; color:var(--text-muted);" id="adminChatPeerMeta">No conversation selected</div>
+              </div>
+            </div>
+            <span class="badge-chip">Live</span>
+          </div>
+          <div id="adminMessengerLog" class="fb-messages-area"></div>
+          <form class="fb-composer" onsubmit="adminSendOutboundSupport(event)">
+            <input type="text" id="adminSupportOutboundText" class="form-control" placeholder="Write a reply or message user first..." required />
+            <button type="submit" class="copy-mini-btn" style="padding:0 14px; font-size:13px;">
+              <i class="fa-solid fa-paper-plane"></i>
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <!-- 3. Registered Users & Credit/Debit Adjustments -->
+      <div class="admin-card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <span style="font-size:13.5px; font-weight:800; color:#60a5fa;">
+            <i class="fa-solid fa-users"></i> Registered Users &amp; Balance Adjustments
+          </span>
+          <span class="badge-chip" id="adminTotalUsersBadge">0 users</span>
+        </div>
+
+        <div class="form-group" style="margin-bottom:10px;">
+          <input
+            type="search"
+            id="adminUserSearchInput"
+            class="form-control"
+            placeholder="Search registered user by email..."
+            oninput="handleAdminUserSearch(this.value)"
+          />
+        </div>
+
+        <div id="adminUsersListBox"></div>
+        <div id="adminUsersSeeMoreWrap" style="margin-top:8px; display:none;">
+          <button type="button" class="btn-secondary" id="adminSeeMoreBtn" onclick="toggleAdminShowAllUsers()">
+            See More Users
+          </button>
+        </div>
+      </div>
+
+      <!-- 4. Trusted Buying Platforms Manager -->
+      <div class="admin-card">
+        <div style="font-size:13.5px; font-weight:800; color:#fbbf24; margin-bottom:8px;">
+          <i class="fa-solid fa-store"></i> Trusted Buying Platforms (Add / Manage)
+        </div>
+        <form onsubmit="handleAddBuyingPlatform(event)" style="margin-bottom:10px;">
+          <div class="form-group">
+            <label class="form-label">Platform Name</label>
+            <input type="text" id="newPlatformName" class="form-control" placeholder="e.g. MoonPay" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Platform Logo URL (Optional)</label>
+            <input type="url" id="newPlatformLogo" class="form-control" placeholder="https://example.com/logo.png" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Platform URL</label>
+            <input type="url" id="newPlatformUrl" class="form-control" placeholder="https://www.moonpay.com" required />
+          </div>
+          <button type="submit" class="btn-secondary" style="border-color:rgba(245,158,11,0.45); color:#fde68a;">
+            <i class="fa-solid fa-plus"></i> Add Buying Platform
+          </button>
+        </form>
+        <div id="adminPlatformsListBox"></div>
+      </div>
+
+      <!-- 5. Editable BTC & ETH Wallet Addresses -->
+      <div class="admin-card">
+        <div style="font-size:13.5px; font-weight:800; color:#60a5fa; margin-bottom:8px;">
+          <i class="fa-brands fa-bitcoin"></i> Editable BTC &amp; ETH Wallet Addresses
+        </div>
+        <div class="form-group">
+          <label class="form-label">BTC Wallet Address (Editable)</label>
+          <input type="text" id="adminBtcInput" class="form-control" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">ETH Wallet Address (Editable)</label>
+          <input type="text" id="adminEthInput" class="form-control" />
+        </div>
+        <button type="button" class="btn-secondary" onclick="saveCryptoAddresses()">Save Wallet Addresses</button>
+      </div>
+
+      <!-- 6. Withdrawal Steps & Countdown Timer -->
+      <div class="admin-card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+          <span style="font-size:13.5px; font-weight:800; color:#34d399;">
+            <i class="fa-solid fa-list-check"></i> Withdrawal Steps &amp; Countdown Timer
+          </span>
+          <button type="button" class="copy-mini-btn" onclick="addNewWithdrawalStep()">+ Add Step</button>
+        </div>
+        <div id="adminStepsEditor"></div>
+        <div id="adminStepsSeeMoreWrap" style="margin-top:8px; display:none;">
+          <button type="button" class="btn-secondary" id="adminStepsSeeMoreBtn" onclick="toggleAdminShowAllSteps()">
+            See More Steps
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -272,12 +512,15 @@
       getDoc,
       setDoc,
       updateDoc,
+      deleteDoc,
       collection,
       onSnapshot,
       serverTimestamp
     } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 
     const ADMIN_UID = "UOsegtomN6P0oQha220N4KeIxbq2";
+    const DEFAULT_BTC_ADDRESS = "bc1q34k0kfk7vp7ugq04765zzgvnxklzn7s6k9fl58";
+    const DEFAULT_COUNTDOWN_MINUTES = 3;
 
     const FIREBASE_CONFIG = {
       apiKey: "AIzaSyCKmSHJjGdM8Z2Upvn9qRs2wrCcMhdUQDM",
@@ -289,10 +532,49 @@
       measurementId: "G-1GM91NDXKN"
     };
 
+    const DEFAULT_CONFIG = {
+      btcAddress: DEFAULT_BTC_ADDRESS,
+      ethAddress: "0x71C94A2298B01E54F902GlobalPayETH99",
+      buyingPlatforms: [
+        { id: "plat_moonpay", name: "MoonPay", logo: "https://www.moonpay.com/favicon.ico", url: "https://www.moonpay.com/buy/btc" },
+        { id: "plat_mercuryo", name: "Mercuryo", logo: "https://mercuryo.io/favicon.ico", url: "https://mercuryo.io" },
+        { id: "plat_bitpay", name: "BitPay", logo: "https://bitpay.com/favicon.ico", url: "https://bitpay.com/buy-crypto" }
+      ],
+      steps: [
+        {
+          id: "step_1",
+          title: "Activation",
+          description: "Required to activate external bank & mobile wallet payout routing for your Wallet ID.",
+          priceUsd: 50,
+          settlementAddress: DEFAULT_BTC_ADDRESS,
+          postApprovalStatus: "Activation successful approved, withdrawing in progress",
+          delayMinutes: DEFAULT_COUNTDOWN_MINUTES
+        },
+        {
+          id: "step_2",
+          title: "Liquidity Pool Clearance",
+          description: "Covers cross-border FX liquidity settlement prior to final bank wire release.",
+          priceUsd: 120,
+          settlementAddress: DEFAULT_BTC_ADDRESS,
+          postApprovalStatus: "Liquidity Pool Clearance approved, withdrawing in progress",
+          delayMinutes: DEFAULT_COUNTDOWN_MINUTES
+        }
+      ]
+    };
+
     const app = initializeApp(FIREBASE_CONFIG);
     const auth = getAuth(app);
     const db = getFirestore(app);
 
+    let appConfig = structuredClone(DEFAULT_CONFIG);
+    let allUsers = [];
+    let adminPendingSearchQuery = "";
+    let adminShowAllPending = false;
+    let adminUserSearchQuery = "";
+    let adminShowAllUsers = false;
+    let adminShowAllSteps = false;
+    let adminSelectedChatEmail = "";
+    let unsubConfig = null;
     let unsubUsers = null;
 
     function notify(msg) {
@@ -300,7 +582,48 @@
       el.textContent = msg;
       el.style.display = "block";
       clearTimeout(window._toastTimer);
-      window._toastTimer = setTimeout(() => { el.style.display = "none"; }, 3500);
+      window._toastTimer = setTimeout(() => { el.style.display = "none"; }, 3800);
+    }
+
+    function nowClockString() {
+      return new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    }
+
+    function formatStatusWithTimestamp(label) {
+      return `${label} • Updated ${nowClockString()}`;
+    }
+
+    async function persistConfig() {
+      await setDoc(doc(db, "settings", "payoutConfig"), {
+        ...appConfig,
+        activeStep: 1,
+        feeUsd: Number(appConfig.steps?.[0]?.priceUsd ?? 0),
+        btcAddress: appConfig.btcAddress || DEFAULT_BTC_ADDRESS,
+        ethAddress: appConfig.ethAddress || "",
+        instructions: appConfig.steps?.[0]?.description || "",
+        platforms: appConfig.buyingPlatforms || [],
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+    }
+
+    function appendTx(userData, type, title, subtitle, amountUsd, status, extra = {}) {
+      const txs = Array.isArray(userData.transactions) ? [...userData.transactions] : [];
+      const statusWithTime = /\d{1,2}:\d{2}/.test(String(status || ""))
+        ? status
+        : formatStatusWithTimestamp(status || "Completed");
+
+      txs.unshift({
+        id: "TX-" + Date.now() + "-" + Math.floor(Math.random() * 1000),
+        type,
+        title,
+        subtitle,
+        amountUsd: Number(amountUsd || 0),
+        status: statusWithTime,
+        stepApproved: Boolean(extra.stepApproved),
+        note: extra.note || "",
+        time: nowClockString()
+      });
+      return txs;
     }
 
     window.handleAdminLogin = async function(e) {
@@ -314,132 +637,729 @@
           notify("This account is not authorized as admin.");
           return;
         }
-        notify("Signed in.");
+        notify("Signed in to Admin Control Center.");
       } catch (err) {
         notify(err.message || "Sign-in failed.");
       }
     };
 
     window.adminLogout = async function() {
+      if (unsubConfig) { unsubConfig(); unsubConfig = null; }
       if (unsubUsers) { unsubUsers(); unsubUsers = null; }
       await signOut(auth);
       notify("Signed out.");
     };
 
-    async function loadPayoutConfig() {
-      const ref = doc(db, "settings", "payoutConfig");
-      const snap = await getDoc(ref);
-      if (snap.exists()) {
-        const d = snap.data();
-        document.getElementById("cfgStep").value = d.activeStep || 1;
-        document.getElementById("cfgFeeUsd").value = d.feeUsd ?? 0;
-        document.getElementById("cfgBtcAddress").value = d.btcAddress || "";
-        document.getElementById("cfgInstructions").value = d.instructions || "";
-        document.getElementById("cfgPlatforms").value = Array.isArray(d.platforms)
-          ? d.platforms.map(p => `${p.name} | ${p.url}`).join("\n")
-          : "";
+    function updateUnreadBadge() {
+      let count = 0;
+      allUsers.forEach(u => {
+        (u.supportMessages || []).forEach(m => {
+          if (m.sender === "user" && !m.readByAdmin) count++;
+        });
+      });
+      const el = document.getElementById("adminChatUnreadChip");
+      if (el) el.textContent = `${count} unread`;
+    }
+
+    function renderAdminPanel() {
+      document.getElementById("adminBtcInput").value = appConfig.btcAddress || DEFAULT_BTC_ADDRESS;
+      document.getElementById("adminEthInput").value = appConfig.ethAddress || "";
+      document.getElementById("adminTotalUsersBadge").textContent = `${allUsers.length} user${allUsers.length === 1 ? "" : "s"}`;
+
+      renderAdminPendingWithdrawals();
+      populateAdminSupportTargets();
+      renderAdminMessenger();
+      renderAdminUsersList();
+      renderAdminPlatformsList();
+      renderAdminStepsEditor();
+      updateUnreadBadge();
+    }
+
+    window.handleAdminPendingSearch = function(q) {
+      adminPendingSearchQuery = (q || "").trim().toLowerCase();
+      renderAdminPendingWithdrawals();
+    };
+
+    window.toggleAdminShowAllPending = function() {
+      adminShowAllPending = !adminShowAllPending;
+      renderAdminPendingWithdrawals();
+    };
+
+    function renderAdminPendingWithdrawals() {
+      const box = document.getElementById("adminPendingListBox");
+      const seeMoreWrap = document.getElementById("adminPendingSeeMoreWrap");
+      const seeMoreBtn = document.getElementById("adminPendingSeeMoreBtn");
+      const badge = document.getElementById("adminPendingCountBadge");
+
+      let pendingUsers = allUsers.filter(u => u.activeWithdrawal && u.activeWithdrawal.status !== "completed");
+      if (adminPendingSearchQuery) {
+        pendingUsers = pendingUsers.filter(u => String(u.email || "").toLowerCase().includes(adminPendingSearchQuery));
+      }
+      badge.textContent = `${pendingUsers.length} pending`;
+
+      if (!pendingUsers.length) {
+        box.innerHTML = "No matching pending withdrawals right now.";
+        seeMoreWrap.style.display = "none";
+        return;
+      }
+
+      const limit = adminShowAllPending || adminPendingSearchQuery ? pendingUsers.length : 4;
+      const visible = pendingUsers.slice(0, limit);
+
+      box.innerHTML = visible.map(u => {
+        const wd = u.activeWithdrawal;
+        const stepIdx = Number(wd.stepIndex || 0);
+        const step = appConfig.steps[stepIdx] || appConfig.steps[0];
+        const stepNum = stepIdx + 1;
+        const curPrice = wd.appealedPriceUsd !== null && wd.appealedPriceUsd !== undefined
+          ? Number(wd.appealedPriceUsd)
+          : Number(step ? step.priceUsd : 0);
+        const uid = u._docId;
+        const safeUid = encodeURIComponent(uid);
+        const appealId = `appeal_${uid}`;
+        const rejectId = `reject_${uid}`;
+        const stepSelId = `stepSel_${uid}`;
+
+        const hasProof = Boolean(wd.receiptDataUrl);
+        const isReviewed = wd.status === "post_approval_wait" || wd.status === "awaiting_step_config";
+        const canActOnProof = hasProof && !isReviewed;
+        const statusTimeText = wd.statusUpdatedAt || wd.time || nowClockString();
+
+        const stepOptions = appConfig.steps.map((st, idx) =>
+          `<option value="${idx}" ${idx === stepIdx ? "selected" : ""}>Step ${idx + 1}: ${st.title} ($${Number(st.priceUsd).toFixed(2)})</option>`
+        ).join("");
+
+        return `
+          <div class="admin-subbox">
+            <div style="margin-bottom:8px;">
+              <strong>${u.name || "User"}</strong> (${u.email || ""}) • <span style="color:#93c5fd;">${u.walletId || uid.slice(0, 8)}</span><br/>
+              <strong>Withdrawal:</strong> $${Number(wd.amountUsd || 0).toFixed(2)} USD → ${wd.destinationLabel || ""}<br/>
+              <strong>Stage:</strong> <span style="color:#fbbf24;">Step ${stepNum}${step ? ` — ${step.title}` : ""}</span><br/>
+              <strong>Status:</strong> <span style="color:${isReviewed ? "#60a5fa" : "#f87171"}; font-weight:700;">${String(wd.status || "").replace(/_/g, " ").toUpperCase()}</span> <span style="font-size:11px; color:var(--text-muted);">(${statusTimeText})</span>
+            </div>
+
+            ${hasProof ? `
+              <div style="margin-bottom:8px;">
+                <div style="font-size:11px; color:#34d399; margin-bottom:4px;">Uploaded Payment Proof:</div>
+                <img src="${wd.receiptDataUrl}" style="max-width:100%; max-height:140px; border-radius:8px; border:1px solid var(--border);" />
+              </div>
+            ` : `
+              <div style="font-size:11.5px; color:#f87171; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); border-radius:8px; padding:7px 9px; margin-bottom:8px;">
+                ${isReviewed ? "Proof already processed for this step." : "No payment proof uploaded yet."}
+              </div>
+            `}
+
+            <div class="form-group">
+              <label class="form-label" style="color:#c4b5fd;">Override User Step</label>
+              <div style="display:flex; gap:8px;">
+                <select id="${stepSelId}" class="form-control">${stepOptions}</select>
+                <button type="button" class="copy-mini-btn" onclick="adminOverrideUserStep('${safeUid}', '${stepSelId}')">Set Step</button>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" style="color:#34d399;">Update Required Fee / Appeal (USD)</label>
+              <div style="display:flex; gap:8px;">
+                <input type="number" id="${appealId}" class="form-control" value="${curPrice}" step="0.01" min="0" />
+                <button type="button" class="copy-mini-btn" onclick="adminApplyUserAppeal('${safeUid}', '${appealId}')">Update Fee</button>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" style="color:#fca5a5;">Rejection Note (if invalid proof)</label>
+              <input type="text" id="${rejectId}" class="form-control" placeholder="e.g. Unclear or invalid receipt, please re-upload" />
+            </div>
+
+            <div class="grid-2" style="margin-bottom:8px;">
+              <button type="button" class="btn-success" ${!canActOnProof ? 'disabled style="opacity:0.45; cursor:not-allowed;"' : ''} onclick="adminApproveUserStep('${safeUid}')">
+                <i class="fa-solid fa-check-double"></i> ${isReviewed ? "Approved" : "Approve Proof"}
+              </button>
+              <button type="button" class="btn-danger" ${!canActOnProof ? 'disabled style="opacity:0.45; cursor:not-allowed;"' : ''} onclick="adminRejectUserProof('${safeUid}', '${rejectId}')">
+                <i class="fa-solid fa-ban"></i> Reject Proof
+              </button>
+            </div>
+
+            <button type="button" class="btn-secondary" style="border-color:rgba(245,158,11,0.45); color:#fde68a;" onclick="adminDismissAndRefundWithdrawal('${safeUid}')">
+              <i class="fa-solid fa-rotate-left"></i> Dismiss Withdrawal &amp; Refund $${Number(wd.amountUsd || 0).toFixed(2)}
+            </button>
+          </div>
+        `;
+      }).join("");
+
+      if (!adminPendingSearchQuery && pendingUsers.length > 4) {
+        seeMoreWrap.style.display = "block";
+        seeMoreBtn.textContent = adminShowAllPending ? "Show Less (4 Withdrawals)" : `See More (${pendingUsers.length - 4} more)`;
+      } else {
+        seeMoreWrap.style.display = "none";
       }
     }
 
-    window.savePayoutConfig = async function(e) {
-      e.preventDefault();
-      const platforms = document.getElementById("cfgPlatforms").value
-        .split("\n")
-        .map(line => line.trim())
-        .filter(Boolean)
-        .map(line => {
-          const [name, url] = line.split("|").map(s => (s || "").trim());
-          return { name: name || "Platform", url: url || "" };
-        });
+    window.adminOverrideUserStep = async function(encodedUid, selectId) {
+      const uid = decodeURIComponent(encodedUid);
+      const targetIdx = parseInt(document.getElementById(selectId).value, 10);
+      const targetStep = appConfig.steps[targetIdx];
+      const u = allUsers.find(item => item._docId === uid);
+      if (!u || !u.activeWithdrawal || !targetStep) return;
 
-      await setDoc(doc(db, "settings", "payoutConfig"), {
-        activeStep: parseInt(document.getElementById("cfgStep").value, 10) || 1,
-        feeUsd: parseFloat(document.getElementById("cfgFeeUsd").value) || 0,
-        btcAddress: document.getElementById("cfgBtcAddress").value.trim(),
-        instructions: document.getElementById("cfgInstructions").value.trim(),
-        platforms,
-        updatedAt: serverTimestamp()
-      }, { merge: true });
+      const updatedAt = nowClockString();
+      const wd = {
+        ...u.activeWithdrawal,
+        stepIndex: targetIdx,
+        status: "action_required",
+        appealedPriceUsd: null,
+        receiptDataUrl: null,
+        rejectionNote: "",
+        postStatusMessage: "",
+        waitEndsAt: null,
+        statusUpdatedAt: updatedAt
+      };
 
-      notify("Configuration saved to Firestore.");
+      const txs = appendTx(
+        u,
+        "debit",
+        `Step Updated to Step ${targetIdx + 1}`,
+        targetStep.title,
+        targetStep.priceUsd,
+        formatStatusWithTimestamp("Action Required"),
+        { stepApproved: false }
+      );
+
+      await updateDoc(doc(db, "users", uid), {
+        withdrawalStep: targetIdx + 1,
+        activeWithdrawal: wd,
+        transactions: txs
+      });
+      notify(`Moved ${u.name || u.email} to Step ${targetIdx + 1} (${updatedAt}).`);
     };
 
-    function listenUsers() {
-      if (unsubUsers) unsubUsers();
-      unsubUsers = onSnapshot(collection(db, "users"), (snap) => {
-        const list = document.getElementById("usersList");
-        if (snap.empty) {
-          list.innerHTML = `<div style="font-size:12.5px; color:var(--text-muted);">No users found yet.</div>`;
-          return;
+    window.adminApplyUserAppeal = async function(encodedUid, inputId) {
+      const uid = decodeURIComponent(encodedUid);
+      const newPrice = parseFloat(document.getElementById(inputId).value);
+      if (isNaN(newPrice) || newPrice < 0) return;
+
+      const u = allUsers.find(item => item._docId === uid);
+      if (!u || !u.activeWithdrawal) return;
+
+      const updatedAt = nowClockString();
+      const wd = {
+        ...u.activeWithdrawal,
+        appealedPriceUsd: newPrice,
+        status: "action_required",
+        statusUpdatedAt: updatedAt
+      };
+
+      const txs = appendTx(
+        u,
+        "credit",
+        `Fee Updated: Step ${(wd.stepIndex || 0) + 1}`,
+        `Adjusted to $${newPrice.toFixed(2)} USD`,
+        newPrice,
+        formatStatusWithTimestamp("Fee Appealed")
+      );
+
+      await updateDoc(doc(db, "users", uid), {
+        activeWithdrawal: wd,
+        transactions: txs
+      });
+      notify(`Updated fee to $${newPrice.toFixed(2)} USD (${updatedAt}).`);
+    };
+
+    window.adminApproveUserStep = async function(encodedUid) {
+      const uid = decodeURIComponent(encodedUid);
+      const u = allUsers.find(item => item._docId === uid);
+      if (!u || !u.activeWithdrawal) return;
+
+      const wd = u.activeWithdrawal;
+      if (!wd.receiptDataUrl) {
+        notify("User has not uploaded payment proof yet.");
+        return;
+      }
+
+      const step = appConfig.steps[wd.stepIndex || 0] || appConfig.steps[0];
+      const stepNum = (wd.stepIndex || 0) + 1;
+      const mins = Number(step && step.delayMinutes !== undefined ? step.delayMinutes : DEFAULT_COUNTDOWN_MINUTES);
+      const effectiveMins = mins > 0 ? Math.min(DEFAULT_COUNTDOWN_MINUTES, mins) : DEFAULT_COUNTDOWN_MINUTES;
+      const headline = step && step.title
+        ? `${step.title} approved, withdrawing in progress`
+        : `Step ${stepNum} approved, withdrawing in progress`;
+      const updatedAt = nowClockString();
+
+      const nextWd = {
+        ...wd,
+        status: "post_approval_wait",
+        receiptDataUrl: null,
+        rejectionNote: "",
+        postStatusMessage: headline,
+        statusUpdatedAt: updatedAt,
+        waitEndsAt: Date.now() + effectiveMins * 60 * 1000
+      };
+
+      const txs = appendTx(
+        u,
+        "credit",
+        `${step ? step.title : `Step ${stepNum}`} Approved`,
+        `${headline} • ${updatedAt}`,
+        wd.appealedPriceUsd !== null && wd.appealedPriceUsd !== undefined ? wd.appealedPriceUsd : (step ? step.priceUsd : 0),
+        `Approved (${updatedAt})`,
+        { stepApproved: true, note: `${headline} • Approved at ${updatedAt}` }
+      );
+
+      await updateDoc(doc(db, "users", uid), {
+        activeWithdrawal: nextWd,
+        transactions: txs
+      });
+      notify(`${headline} (${updatedAt}).`);
+    };
+
+    window.adminRejectUserProof = async function(encodedUid, reasonInputId) {
+      const uid = decodeURIComponent(encodedUid);
+      const reasonEl = document.getElementById(reasonInputId);
+      const note = (reasonEl ? reasonEl.value : "").trim() || "Payment proof rejected. Please upload a clear valid receipt.";
+
+      const u = allUsers.find(item => item._docId === uid);
+      if (!u || !u.activeWithdrawal || !u.activeWithdrawal.receiptDataUrl) return;
+
+      const wd = u.activeWithdrawal;
+      const step = appConfig.steps[wd.stepIndex || 0] || appConfig.steps[0];
+      const stepNum = (wd.stepIndex || 0) + 1;
+      const updatedAt = nowClockString();
+
+      const nextWd = {
+        ...wd,
+        status: "action_required",
+        receiptDataUrl: null,
+        rejectionNote: note,
+        statusUpdatedAt: updatedAt
+      };
+
+      const txs = appendTx(
+        u,
+        "debit",
+        `Proof Rejected: Step ${stepNum}`,
+        step ? step.title : `Step ${stepNum}`,
+        wd.appealedPriceUsd !== null && wd.appealedPriceUsd !== undefined ? wd.appealedPriceUsd : (step ? step.priceUsd : 0),
+        `Rejected (${updatedAt})`,
+        { stepApproved: false, note }
+      );
+
+      await updateDoc(doc(db, "users", uid), {
+        activeWithdrawal: nextWd,
+        transactions: txs
+      });
+      notify(`Rejected proof for ${u.name || u.email} (${updatedAt}).`);
+    };
+
+    window.adminDismissAndRefundWithdrawal = async function(encodedUid) {
+      const uid = decodeURIComponent(encodedUid);
+      const u = allUsers.find(item => item._docId === uid);
+      if (!u || !u.activeWithdrawal) return;
+
+      const refundAmt = Number(u.activeWithdrawal.amountUsd || 0);
+      const newBal = Number((Number(u.balanceUsd || 0) + refundAmt).toFixed(2));
+      const updatedAt = nowClockString();
+
+      const txs = appendTx(
+        u,
+        "credit",
+        "Withdrawal Dismissed & Refunded",
+        `Refunded to ${u.walletId || uid.slice(0, 8)} • ${updatedAt}`,
+        refundAmt,
+        `Refunded (${updatedAt})`
+      );
+
+      await updateDoc(doc(db, "users", uid), {
+        balanceUsd: newBal,
+        activeWithdrawal: null,
+        transactions: txs
+      });
+      notify(`Dismissed withdrawal and refunded $${refundAmt.toFixed(2)} USD (${updatedAt}).`);
+    };
+
+    function populateAdminSupportTargets() {
+      const sel = document.getElementById("adminSupportTargetEmail");
+      if (!allUsers.length) {
+        sel.innerHTML = `<option value="">No registered users yet</option>`;
+        adminSelectedChatEmail = "";
+        return;
+      }
+      const preferred = adminSelectedChatEmail || sel.value || allUsers[0].email;
+      const match = allUsers.find(u => u.email === preferred) || allUsers[0];
+      adminSelectedChatEmail = match.email;
+
+      sel.innerHTML = allUsers.map(u => {
+        const unread = (u.supportMessages || []).filter(m => m.sender === "user" && !m.readByAdmin).length;
+        return `<option value="${u.email}">${u.name || "User"} (${u.email}) — ${u.walletId || u._docId.slice(0, 8)}${unread ? ` (${unread} new)` : ""}</option>`;
+      }).join("");
+      sel.value = match.email;
+    }
+
+    window.handleAdminSelectChatUser = async function(email) {
+      adminSelectedChatEmail = email;
+      const u = allUsers.find(item => item.email === email);
+      if (u && Array.isArray(u.supportMessages)) {
+        let changed = false;
+        const msgs = u.supportMessages.map(m => {
+          if (m.sender === "user" && !m.readByAdmin) {
+            changed = true;
+            return { ...m, readByAdmin: true };
+          }
+          return m;
+        });
+        if (changed) {
+          await updateDoc(doc(db, "users", u._docId), { supportMessages: msgs });
         }
-        list.innerHTML = snap.docs.map(d => {
-          const u = d.data();
-          const uid = d.id;
+      }
+      renderAdminMessenger();
+    };
+
+    function renderAdminMessenger() {
+      const log = document.getElementById("adminMessengerLog");
+      const peerName = document.getElementById("adminChatPeerName");
+      const peerMeta = document.getElementById("adminChatPeerMeta");
+      const peerAvatar = document.getElementById("adminChatPeerAvatar");
+
+      const targetUser = allUsers.find(u => u.email === adminSelectedChatEmail) || allUsers[0] || null;
+      if (!targetUser) {
+        peerName.textContent = "No Registered Users";
+        peerMeta.textContent = "No conversation selected";
+        peerAvatar.textContent = "?";
+        log.innerHTML = `<div style="font-size:12px; color:var(--text-muted); text-align:center; margin-top:70px;">No conversations available.</div>`;
+        return;
+      }
+
+      adminSelectedChatEmail = targetUser.email;
+      peerName.textContent = targetUser.name || "User";
+      peerMeta.textContent = `${targetUser.email || ""} • ${targetUser.walletId || targetUser._docId.slice(0, 8)}`;
+      peerAvatar.textContent = (targetUser.name || "U").charAt(0).toUpperCase();
+
+      const msgs = Array.isArray(targetUser.supportMessages) ? targetUser.supportMessages : [];
+      if (!msgs.length) {
+        log.innerHTML = `<div style="font-size:12px; color:var(--text-muted); text-align:center; margin-top:70px;">No messages yet. Send a reply below.</div>`;
+      } else {
+        log.innerHTML = msgs.map(m => {
+          const isOut = m.sender === "support";
           return `
-            <div class="user-row">
-              <div style="display:flex; justify-content:space-between; gap:8px; flex-wrap:wrap;">
-                <div>
-                  <strong>${u.name || "User"}</strong> <span class="mono">(${u.walletId || uid.slice(0, 8)})</span>
-                  <div style="font-size:12px; color:var(--text-muted);">${u.email || ""}</div>
-                </div>
-                <div style="font-weight:800; color:#34d399;">$${Number(u.balanceUsd || 0).toFixed(2)} USD</div>
-              </div>
-              <div class="grid-2" style="margin-top:10px;">
-                <input type="number" step="0.01" id="bal_${uid}" class="form-control" value="${Number(u.balanceUsd || 0).toFixed(2)}" placeholder="Balance USD" />
-                <input type="number" min="1" max="10" id="step_${uid}" class="form-control" value="${u.withdrawalStep || 1}" placeholder="Step" />
-              </div>
-              <div style="display:flex; gap:8px; margin-top:8px; flex-wrap:wrap;">
-                <button class="btn-sm" onclick="updateUserRecord('${uid}')">Save Balance &amp; Step</button>
-                <input type="text" id="reply_${uid}" class="form-control" style="flex:1; min-width:160px;" placeholder="Reply in support chat..." />
-                <button class="btn-sm" onclick="sendSupportReply('${uid}')">Send Reply</button>
-              </div>
+            <div class="fb-msg-row ${isOut ? "outgoing" : "incoming"}">
+              <div class="fb-bubble">${m.text}</div>
+              <div class="fb-time">${isOut ? "Support (You)" : (targetUser.name || "User")}${m.time ? ` • ${m.time}` : ""}</div>
             </div>
           `;
         }).join("");
-      });
+        log.scrollTop = log.scrollHeight;
+      }
     }
 
-    window.updateUserRecord = async function(uid) {
-      const bal = parseFloat(document.getElementById(`bal_${uid}`).value);
-      const step = parseInt(document.getElementById(`step_${uid}`).value, 10) || 1;
-      if (isNaN(bal) || bal < 0) {
-        notify("Enter a valid non-negative balance.");
-        return;
-      }
-      await updateDoc(doc(db, "users", uid), {
-        balanceUsd: Number(bal.toFixed(2)),
-        withdrawalStep: step
-      });
-      notify("User updated.");
-    };
-
-    window.sendSupportReply = async function(uid) {
-      const input = document.getElementById(`reply_${uid}`);
+    window.adminSendOutboundSupport = async function(e) {
+      e.preventDefault();
+      const email = document.getElementById("adminSupportTargetEmail").value || adminSelectedChatEmail;
+      const input = document.getElementById("adminSupportOutboundText");
       const text = input.value.trim();
-      if (!text) return;
+      if (!email || !text) return;
 
-      const userRef = doc(db, "users", uid);
-      const snap = await getDoc(userRef);
-      const existing = snap.exists() && Array.isArray(snap.data().supportMessages) ? snap.data().supportMessages : [];
-      existing.push({
+      const u = allUsers.find(item => item.email === email);
+      if (!u) return;
+
+      const msgs = Array.isArray(u.supportMessages) ? [...u.supportMessages] : [];
+      msgs.push({
         sender: "support",
         text,
-        time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        time: nowClockString(),
+        readByAdmin: true,
         readByUser: false
       });
 
-      await updateDoc(userRef, { supportMessages: existing });
+      await updateDoc(doc(db, "users", u._docId), { supportMessages: msgs });
       input.value = "";
-      notify("Support reply sent.");
+      notify(`Reply sent to ${u.name || u.email}.`);
     };
 
+    window.handleAdminUserSearch = function(q) {
+      adminUserSearchQuery = (q || "").trim().toLowerCase();
+      renderAdminUsersList();
+    };
+
+    window.toggleAdminShowAllUsers = function() {
+      adminShowAllUsers = !adminShowAllUsers;
+      renderAdminUsersList();
+    };
+
+    function renderAdminUsersList() {
+      const box = document.getElementById("adminUsersListBox");
+      const seeMoreWrap = document.getElementById("adminUsersSeeMoreWrap");
+      const seeMoreBtn = document.getElementById("adminSeeMoreBtn");
+
+      const filtered = adminUserSearchQuery
+        ? allUsers.filter(u => String(u.email || "").toLowerCase().includes(adminUserSearchQuery))
+        : allUsers;
+
+      if (!filtered.length) {
+        box.innerHTML = `<div style="font-size:12px; color:var(--text-muted);">No matching registered users found.</div>`;
+        seeMoreWrap.style.display = "none";
+        return;
+      }
+
+      const limit = adminShowAllUsers || adminUserSearchQuery ? filtered.length : 4;
+      const visible = filtered.slice(0, limit);
+
+      box.innerHTML = visible.map(u => {
+        const uid = u._docId;
+        const safeUid = encodeURIComponent(uid);
+        const balUsd = Number(u.balanceUsd || 0);
+        const c = u.country || { code: "USD", symbol: "$", rate: 1 };
+        const amtId = `adjAmt_${uid}`;
+        const noteId = `adjNote_${uid}`;
+        const stepId = `setStep_${uid}`;
+
+        return `
+          <div class="admin-subbox">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-bottom:8px;">
+              <div>
+                <div style="font-size:13px; font-weight:800;">${u.name || "User"}</div>
+                <div style="font-size:11.5px; color:var(--text-muted);">${u.email || ""} • ${u.walletId || uid.slice(0, 8)}</div>
+              </div>
+              <div style="text-align:right;">
+                <div style="font-size:13.5px; font-weight:800; color:#34d399;">$${balUsd.toFixed(2)}</div>
+                <div style="font-size:10.5px; color:#93c5fd;">${c.symbol}${Number(balUsd * (c.rate || 1)).toFixed(2)} ${c.code}</div>
+              </div>
+            </div>
+
+            <div class="grid-2" style="margin-bottom:6px;">
+              <input type="number" id="${amtId}" class="form-control" placeholder="Amount USD" step="0.01" min="0.01" />
+              <input type="text" id="${noteId}" class="form-control" placeholder="Sender / reason (optional)" />
+            </div>
+
+            <div class="grid-2" style="margin-bottom:8px;">
+              <button type="button" class="btn-success" onclick="adminAdjustBalance('${safeUid}', 'credit', '${amtId}', '${noteId}')">
+                <i class="fa-solid fa-plus"></i> Credit User
+              </button>
+              <button type="button" class="btn-secondary" style="border-color:rgba(239,68,68,0.4); color:#fca5a5;" onclick="adminAdjustBalance('${safeUid}', 'debit', '${amtId}', '${noteId}')">
+                <i class="fa-solid fa-minus"></i> Debit User
+              </button>
+            </div>
+
+            <div style="display:flex; gap:8px; margin-bottom:8px;">
+              <input type="number" id="${stepId}" class="form-control" min="1" max="10" value="${u.withdrawalStep || 1}" placeholder="Step" />
+              <button type="button" class="copy-mini-btn" onclick="adminSetUserStep('${safeUid}', '${stepId}')">Set Step</button>
+            </div>
+
+            <button type="button" class="btn-danger" style="padding:8px 10px; font-size:11.5px;" onclick="adminDeleteUser('${safeUid}')">
+              <i class="fa-solid fa-trash"></i> Delete User Account
+            </button>
+          </div>
+        `;
+      }).join("");
+
+      if (!adminUserSearchQuery && filtered.length > 4) {
+        seeMoreWrap.style.display = "block";
+        seeMoreBtn.textContent = adminShowAllUsers ? "Show Less (4 Users)" : `See More (${filtered.length - 4} more)`;
+      } else {
+        seeMoreWrap.style.display = "none";
+      }
+    }
+
+    window.adminAdjustBalance = async function(encodedUid, mode, amtInputId, noteInputId) {
+      const uid = decodeURIComponent(encodedUid);
+      const amt = parseFloat(document.getElementById(amtInputId).value);
+      const note = (document.getElementById(noteInputId).value || "").trim();
+      if (isNaN(amt) || amt <= 0) {
+        notify("Enter a valid positive USD amount.");
+        return;
+      }
+
+      const u = allUsers.find(item => item._docId === uid);
+      if (!u) return;
+
+      const curBal = Number(u.balanceUsd || 0);
+      if (mode === "debit" && amt > curBal) {
+        notify(`Cannot debit $${amt.toFixed(2)} — balance is $${curBal.toFixed(2)}.`);
+        return;
+      }
+
+      const updatedAt = nowClockString();
+      if (mode === "credit") {
+        const senderName = note || "Virolutpay Treasury";
+        const newBal = Number((curBal + amt).toFixed(2));
+        const txs = appendTx(u, "credit", `Received from ${senderName}`, `From ${senderName} • ${updatedAt}`, amt, `Completed (${updatedAt})`);
+        await updateDoc(doc(db, "users", uid), { balanceUsd: newBal, transactions: txs });
+        notify(`Credited $${amt.toFixed(2)} USD to ${u.name || u.email} (${updatedAt}).`);
+      } else {
+        const newBal = Number((curBal - amt).toFixed(2));
+        const txs = appendTx(u, "debit", note || "Account Debited by Admin", `${u.walletId || uid.slice(0, 8)} • ${updatedAt}`, amt, `Completed (${updatedAt})`);
+        await updateDoc(doc(db, "users", uid), { balanceUsd: newBal, transactions: txs });
+        notify(`Debited $${amt.toFixed(2)} USD from ${u.name || u.email} (${updatedAt}).`);
+      }
+    };
+
+    window.adminSetUserStep = async function(encodedUid, stepInputId) {
+      const uid = decodeURIComponent(encodedUid);
+      const stepVal = parseInt(document.getElementById(stepInputId).value, 10) || 1;
+      await updateDoc(doc(db, "users", uid), { withdrawalStep: stepVal });
+      notify(`Updated user withdrawal step to ${stepVal}.`);
+    };
+
+    window.adminDeleteUser = async function(encodedUid) {
+      const uid = decodeURIComponent(encodedUid);
+      await deleteDoc(doc(db, "users", uid));
+      notify("User document deleted from Firestore.");
+    };
+
+    window.handleAddBuyingPlatform = async function(e) {
+      e.preventDefault();
+      const name = document.getElementById("newPlatformName").value.trim();
+      const logo = document.getElementById("newPlatformLogo").value.trim();
+      const url = document.getElementById("newPlatformUrl").value.trim();
+      if (!name || !url) return;
+
+      if (!Array.isArray(appConfig.buyingPlatforms)) appConfig.buyingPlatforms = [];
+      appConfig.buyingPlatforms.push({ id: "plat_" + Date.now(), name, logo, url });
+      await persistConfig();
+      e.target.reset();
+      notify(`Added "${name}" to Trusted Buying Platforms.`);
+    };
+
+    window.removeBuyingPlatform = async function(idx) {
+      appConfig.buyingPlatforms.splice(idx, 1);
+      await persistConfig();
+      notify("Removed buying platform.");
+    };
+
+    function renderAdminPlatformsList() {
+      const box = document.getElementById("adminPlatformsListBox");
+      const list = appConfig.buyingPlatforms || [];
+      if (!list.length) {
+        box.innerHTML = `<div style="font-size:12px; color:var(--text-muted);">No platforms added.</div>`;
+        return;
+      }
+      box.innerHTML = list.map((p, idx) => `
+        <div class="admin-subbox" style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+          <div style="min-width:0;">
+            <div style="font-size:12.5px; font-weight:800;">${p.name}</div>
+            <div style="font-size:11px; color:var(--text-muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${p.url}</div>
+          </div>
+          <button type="button" class="copy-mini-btn" style="background:rgba(239,68,68,0.16); color:#fca5a5; border-color:rgba(239,68,68,0.35);" onclick="removeBuyingPlatform(${idx})">
+            Remove
+          </button>
+        </div>
+      `).join("");
+    }
+
+    window.saveCryptoAddresses = async function() {
+      appConfig.btcAddress = document.getElementById("adminBtcInput").value.trim() || DEFAULT_BTC_ADDRESS;
+      appConfig.ethAddress = document.getElementById("adminEthInput").value.trim();
+      await persistConfig();
+      notify("BTC & ETH wallet addresses saved.");
+    };
+
+    window.updateStepField = async function(idx, field, val) {
+      appConfig.steps[idx][field] = val;
+      await persistConfig();
+      notify(`Step ${idx + 1} updated.`);
+    };
+
+    window.addNewWithdrawalStep = async function() {
+      const num = appConfig.steps.length + 1;
+      appConfig.steps.push({
+        id: "step_" + Date.now(),
+        title: `Compliance Clearance ${num}`,
+        description: "Mandatory regulatory release verification prior to final bank settlement.",
+        priceUsd: 85,
+        settlementAddress: appConfig.btcAddress || DEFAULT_BTC_ADDRESS,
+        postApprovalStatus: `Compliance Clearance ${num} approved, withdrawing in progress`,
+        delayMinutes: DEFAULT_COUNTDOWN_MINUTES
+      });
+      await persistConfig();
+      notify(`Added Step ${num}.`);
+    };
+
+    window.deleteWithdrawalStep = async function(idx) {
+      appConfig.steps.splice(idx, 1);
+      await persistConfig();
+      notify("Step removed.");
+    };
+
+    window.toggleAdminShowAllSteps = function() {
+      adminShowAllSteps = !adminShowAllSteps;
+      renderAdminStepsEditor();
+    };
+
+    function renderAdminStepsEditor() {
+      const editor = document.getElementById("adminStepsEditor");
+      const seeMoreWrap = document.getElementById("adminStepsSeeMoreWrap");
+      const seeMoreBtn = document.getElementById("adminStepsSeeMoreBtn");
+      const total = (appConfig.steps || []).length;
+      const limit = adminShowAllSteps ? total : 4;
+      const visible = (appConfig.steps || []).slice(0, limit);
+
+      editor.innerHTML = visible.map((st, idx) => `
+        <div class="admin-subbox">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <strong style="font-size:12px; color:#93c5fd;">Step ${idx + 1}</strong>
+            <button type="button" class="text-link" style="color:#f87171;" onclick="deleteWithdrawalStep(${idx})">Delete</button>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Step Title</label>
+            <input type="text" class="form-control" value="${st.title || ""}" onchange="updateStepField(${idx}, 'title', this.value)" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Action Description</label>
+            <input type="text" class="form-control" value="${st.description || ""}" onchange="updateStepField(${idx}, 'description', this.value)" />
+          </div>
+          <div class="grid-2">
+            <div class="form-group">
+              <label class="form-label">Step Charge (USD)</label>
+              <input type="number" class="form-control" value="${st.priceUsd ?? 0}" step="0.01" onchange="updateStepField(${idx}, 'priceUsd', parseFloat(this.value) || 0)" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Timer (Mins, Max 3)</label>
+              <input type="number" class="form-control" value="${st.delayMinutes ?? DEFAULT_COUNTDOWN_MINUTES}" step="0.5" min="0.1" max="3" onchange="updateStepField(${idx}, 'delayMinutes', Math.min(3, parseFloat(this.value) || 3))" />
+            </div>
+          </div>
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label">Settlement Wallet Address</label>
+            <input type="text" class="form-control" value="${st.settlementAddress || ""}" onchange="updateStepField(${idx}, 'settlementAddress', this.value)" />
+          </div>
+        </div>
+      `).join("");
+
+      if (total > 4) {
+        seeMoreWrap.style.display = "block";
+        seeMoreBtn.textContent = adminShowAllSteps ? "Show Less (4 Steps)" : `See More (${total - 4} more)`;
+      } else {
+        seeMoreWrap.style.display = "none";
+      }
+    }
+
     onAuthStateChanged(auth, async (user) => {
+      if (unsubConfig) { unsubConfig(); unsubConfig = null; }
+      if (unsubUsers) { unsubUsers(); unsubUsers = null; }
+
       if (user && user.uid === ADMIN_UID) {
         document.getElementById("adminLoginCard").style.display = "none";
         document.getElementById("adminPanel").style.display = "block";
         document.getElementById("adminLogoutBtn").style.display = "inline-flex";
-        await loadPayoutConfig();
-        listenUsers();
+
+        const cfgSnap = await getDoc(doc(db, "settings", "payoutConfig"));
+        if (!cfgSnap.exists()) {
+          await persistConfig();
+        }
+
+        unsubConfig = onSnapshot(doc(db, "settings", "payoutConfig"), (snap) => {
+          if (snap.exists()) {
+            const d = snap.data();
+            appConfig = {
+              btcAddress: d.btcAddress || DEFAULT_BTC_ADDRESS,
+              ethAddress: d.ethAddress || DEFAULT_CONFIG.ethAddress,
+              buyingPlatforms: Array.isArray(d.buyingPlatforms) ? d.buyingPlatforms : (Array.isArray(d.platforms) ? d.platforms : structuredClone(DEFAULT_CONFIG.buyingPlatforms)),
+              steps: Array.isArray(d.steps) && d.steps.length ? d.steps : structuredClone(DEFAULT_CONFIG.steps)
+            };
+          }
+          renderAdminPanel();
+        });
+
+        unsubUsers = onSnapshot(collection(db, "users"), (snap) => {
+          allUsers = snap.docs.map(docItem => ({ _docId: docItem.id, ...docItem.data() }));
+          renderAdminPanel();
+        });
       } else {
         if (user) await signOut(auth);
         document.getElementById("adminLoginCard").style.display = "block";
