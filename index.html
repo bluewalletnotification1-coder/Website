@@ -304,6 +304,8 @@
       font-weight: 600;
       cursor: pointer;
       padding: 0;
+      text-decoration: underline;
+      text-underline-offset: 2px;
     }
 
     .otp-grid {
@@ -806,6 +808,38 @@
       font-weight: 700;
       cursor: pointer;
     }
+
+    .legal-doc {
+      font-size: 12.5px;
+      line-height: 1.6;
+      color: #cbd5e1;
+    }
+
+    .legal-doc h3 {
+      font-size: 14px;
+      font-weight: 800;
+      color: #f8fafc;
+      margin: 14px 0 6px;
+    }
+
+    .legal-doc h4 {
+      font-size: 13px;
+      font-weight: 700;
+      color: #93c5fd;
+      margin: 10px 0 4px;
+    }
+
+    .legal-doc p {
+      margin-bottom: 8px;
+    }
+
+    .legal-doc ul {
+      margin: 4px 0 10px 18px;
+    }
+
+    .legal-doc li {
+      margin-bottom: 4px;
+    }
   </style>
 </head>
 <body>
@@ -858,13 +892,17 @@
             <input type="password" id="regPassword" class="form-control" placeholder="Create a password (min 6 characters)" minlength="6" required />
           </div>
 
-          <label class="checkbox-row">
+          <div class="checkbox-row">
             <input type="checkbox" id="regTerms" required />
-            <span>I agree to the Virolutpay Terms &amp; Conditions, Multi-Currency Wallet Policy, and Compliance Verification Rules.</span>
-          </label>
+            <span>
+              I agree to the
+              <button type="button" class="text-link" onclick="openModal('termsModal')">Terms &amp; Conditions and Privacy Policy</button>,
+              Multi-Currency Wallet Policy, and Compliance Verification Rules.
+            </span>
+          </div>
 
           <button type="submit" class="btn-primary">
-            Send Verification Code <i class="fa-solid fa-arrow-right"></i>
+            Create Account <i class="fa-solid fa-arrow-right"></i>
           </button>
         </form>
 
@@ -988,6 +1026,69 @@
         </button>
       </div>
     </section>
+  </div>
+
+  <!-- MODAL: TERMS & CONDITIONS AND PRIVACY POLICY -->
+  <div id="termsModal" class="app-modal top-layer">
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <span class="modal-title">Terms &amp; Conditions and Privacy Policy</span>
+        <button class="close-btn" onclick="closeModal('termsModal')"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="legal-doc">
+        <p><strong>Last Updated:</strong> November 20, 2026 &bull; <strong>Platform:</strong> Virolutpay Multi-Currency Wallet &amp; Transfers</p>
+        <p>Welcome to <strong>Virolutpay</strong>. These Terms &amp; Conditions and Privacy Policy (collectively, the "Agreement") govern your access to and use of the Virolutpay web application, multi-currency wallet wallets, peer-to-peer transfer features, payment request tools, and support channels (collectively, the "Services"). By creating an account, verifying your email address, or continuing to use the Services, you agree to be bound by this Agreement.</p>
+
+        <h3>Part I: Terms &amp; Conditions</h3>
+        <h4>1. Eligibility and Account Registration</h4>
+        <p>You must be at least eighteen (18) years old—or the age of legal majority in your jurisdiction—and legally capable of entering into binding agreements. During registration, you agree to provide accurate, current, and complete information, including your full name, email address, country of residence, and password.</p>
+        <p>Before an account is created, Virolutpay requires email verification using a one-time verification code sent to your email address. You are solely responsible for maintaining access to your registered email account and for all activities under your credentials.</p>
+
+        <h4>2. Multi-Currency Wallets and Balances</h4>
+        <p>Virolutpay provides a multi-currency wallet interface displaying balances across your selected local currency as well as global reference currencies such as USD, EUR, and GBP, alongside a unique Wallet ID assigned to your profile. Displayed currency equivalents are for informational and wallet management convenience.</p>
+
+        <h4>3. Sending, Receiving, and Requesting Funds</h4>
+        <p>You can send funds to other Virolutpay users using a Wallet ID or registered email address, receive funds into your wallet or designated settlement addresses, and generate payment request links. You are responsible for verifying the recipient's Wallet ID, email address, and transfer amount before confirming.</p>
+
+        <h4>4. External Platforms and Third-Party Services</h4>
+        <p>Virolutpay may reference or link to external third-party platforms or services. Virolutpay does not own or control third-party websites or services and is not responsible for their terms, fees, processing times, or actions.</p>
+
+        <h4>5. Acceptable Use and Prohibited Conduct</h4>
+        <ul>
+          <li>Do not attempt unauthorized access to other user accounts, backend databases, authentication systems, or restricted areas.</li>
+          <li>Do not interfere with or disrupt the availability, performance, or security of the Services.</li>
+          <li>Do not use automated scripts, bots, scrapers, or reverse-engineering tools to extract data or manipulate workflows.</li>
+          <li>Do not submit false or misleading information or use the platform or support chat for abusive or unlawful activity.</li>
+        </ul>
+
+        <h4>6. Intellectual Property</h4>
+        <p>All software, visual designs, layouts, branding elements, graphics, text, and interface components provided within Virolutpay belong to Virolutpay or its licensors and are protected by applicable intellectual property laws.</p>
+
+        <h4>7. Suspension, Disclaimers, and Limitation of Liability</h4>
+        <p>We may suspend or restrict access if we reasonably suspect a breach of this Agreement, fraudulent or abusive behavior, security risks, or legal obligations. The Services are provided "as is" and "as available" without warranties of any kind. To the fullest extent permitted by law, Virolutpay is not liable for indirect, incidental, special, or consequential damages, or loss of profits, revenue, data, or goodwill.</p>
+
+        <h3>Part II: Privacy Policy &amp; User Data Protection</h3>
+        <h4>8. Commitment to Protecting User Data</h4>
+        <p>All user data is protected and treated as confidential information entrusted to Virolutpay. We apply technical, administrative, and organizational safeguards to protect user information against unauthorized access, alteration, disclosure, loss, or misuse.</p>
+
+        <h4>9. Information We Collect</h4>
+        <ul>
+          <li><strong>Account &amp; Profile Data:</strong> Full name, email address, selected country, and Wallet ID.</li>
+          <li><strong>Authentication &amp; Verification Data:</strong> Account credentials and temporary verification data used to confirm email ownership.</li>
+          <li><strong>Wallet &amp; Transaction Data:</strong> Currency preferences, balance records, transfer history, payment request details, and timestamps.</li>
+          <li><strong>Support &amp; Technical Data:</strong> Support messages and basic browser or session data needed for security and reliability.</li>
+        </ul>
+
+        <h4>10. How We Use and Safeguard Protected Data</h4>
+        <p>We use user data strictly to create and maintain your account, process authorized transfers, send verification codes and essential notices, provide customer support, protect accounts against abuse, and meet legal obligations. We do not sell user personal data to data brokers or advertisers, and we use encrypted connections and access controls to keep user data protected.</p>
+
+        <h4>11. Data Retention, Rights, and Contact</h4>
+        <p>We retain user data for as long as needed to provide the Services, resolve disputes, enforce this Agreement, or meet legal obligations. You may review your account details or contact our 24/7 Support Messenger with questions about your privacy and data protection.</p>
+      </div>
+      <div style="margin-top:16px;">
+        <button type="button" class="btn-primary" onclick="closeModal('termsModal')">Done Reading</button>
+      </div>
+    </div>
   </div>
 
   <!-- MODAL 1: FORGOT PASSWORD -->
@@ -1272,10 +1373,199 @@
     const WORLD_COUNTRIES = [
       { name: "United States", code: "USD", symbol: "$", rate: 1.00 },
       { name: "United Kingdom", code: "GBP", symbol: "£", rate: 0.79 },
-      { name: "European Union (Eurozone)", code: "EUR", symbol: "€", rate: 0.92 },
       { name: "Nigeria", code: "NGN", symbol: "₦", rate: 1580.00 },
+      { name: "Afghanistan", code: "AFN", symbol: "؋", rate: 71.00 },
+      { name: "Albania", code: "ALL", symbol: "L", rate: 92.00 },
+      { name: "Algeria", code: "DZD", symbol: "د.ج", rate: 134.00 },
+      { name: "Andorra", code: "EUR", symbol: "€", rate: 0.92 },
+      { name: "Angola", code: "AOA", symbol: "Kz", rate: 910.00 },
+      { name: "Antigua and Barbuda", code: "XCD", symbol: "EC$", rate: 2.70 },
+      { name: "Argentina", code: "ARS", symbol: "$", rate: 995.00 },
+      { name: "Armenia", code: "AMD", symbol: "֏", rate: 388.00 },
+      { name: "Australia", code: "AUD", symbol: "A$", rate: 1.52 },
+      { name: "Austria", code: "EUR", symbol: "€", rate: 0.92 },
+      { name: "Azerbaijan", code: "AZN", symbol: "₼", rate: 1.70 },
+      { name: "Bahamas", code: "BSD", symbol: "B$", rate: 1.00 },
+      { name: "Bahrain", code: "BHD", symbol: ".د.ب", rate: 0.376 },
+      { name: "Bangladesh", code: "BDT", symbol: "৳", rate: 119.50 },
+      { name: "Barbados", code: "BBD", symbol: "Bds$", rate: 2.00 },
+      { name: "Belarus", code: "BYN", symbol: "Br", rate: 3.28 },
+      { name: "Belgium", code: "EUR", symbol: "€", rate: 0.92 },
+      { name: "Belize", code: "BZD", symbol: "BZ$", rate: 2.00 },
+      { name: "Benin", code: "XOF", symbol: "CFA", rate: 605.00 },
+      { name: "Bhutan", code: "BTN", symbol: "Nu.", rate: 84.00 },
+      { name: "Bolivia", code: "BOB", symbol: "Bs.", rate: 6.91 },
+      { name: "Bosnia and Herzegovina", code: "BAM", symbol: "KM", rate: 1.80 },
+      { name: "Botswana", code: "BWP", symbol: "P", rate: 13.50 },
+      { name: "Brazil", code: "BRL", symbol: "R$", rate: 5.75 },
+      { name: "Brunei", code: "BND", symbol: "B$", rate: 1.34 },
+      { name: "Bulgaria", code: "BGN", symbol: "лв", rate: 1.80 },
+      { name: "Burkina Faso", code: "XOF", symbol: "CFA", rate: 605.00 },
+      { name: "Burundi", code: "BIF", symbol: "FBu", rate: 2910.00 },
+      { name: "Cabo Verde", code: "CVE", symbol: "Esc", rate: 101.00 },
+      { name: "Cambodia", code: "KHR", symbol: "៛", rate: 4060.00 },
+      { name: "Cameroon", code: "XAF", symbol: "FCFA", rate: 605.00 },
       { name: "Canada", code: "CAD", symbol: "C$", rate: 1.38 },
-      { name: "Australia", code: "AUD", symbol: "A$", rate: 1.52 }
+      { name: "Central African Republic", code: "XAF", symbol: "FCFA", rate: 605.00 },
+      { name: "Chad", code: "XAF", symbol: "FCFA", rate: 605.00 },
+      { name: "Chile", code: "CLP", symbol: "CLP$", rate: 960.00 },
+      { name: "China", code: "CNY", symbol: "¥", rate: 7.22 },
+      { name: "Colombia", code: "COP", symbol: "COL$", rate: 4320.00 },
+      { name: "Comoros", code: "KMF", symbol: "CF", rate: 453.00 },
+      { name: "Congo (Congo-Brazzaville)", code: "XAF", symbol: "FCFA", rate: 605.00 },
+      { name: "Costa Rica", code: "CRC", symbol: "₡", rate: 512.00 },
+      { name: "Croatia", code: "EUR", symbol: "€", rate: 0.92 },
+      { name: "Cuba", code: "CUP", symbol: "$", rate: 24.00 },
+      { name: "Cyprus", code: "EUR", symbol: "€", rate: 0.92 },
+      { name: "Czechia", code: "CZK", symbol: "Kč", rate: 23.40 },
+      { name: "Democratic Republic of the Congo", code: "CDF", symbol: "FC", rate: 2850.00 },
+      { name: "Denmark", code: "DKK", symbol: "kr", rate: 6.86 },
+      { name: "Djibouti", code: "DJF", symbol: "Fdj", rate: 178.00 },
+      { name: "Dominica", code: "XCD", symbol: "EC$", rate: 2.70 },
+      { name: "Dominican Republic", code: "DOP", symbol: "RD$", rate: 60.20 },
+      { name: "Ecuador", code: "USD", symbol: "$", rate: 1.00 },
+      { name: "Egypt", code: "EGP", symbol: "E£", rate: 49.30 },
+      { name: "El Salvador", code: "USD", symbol: "$", rate: 1.00 },
+      { name: "Equatorial Guinea", code: "XAF", symbol: "FCFA", rate: 605.00 },
+      { name: "Eritrea", code: "ERN", symbol: "Nfk", rate: 15.00 },
+      { name: "Estonia", code: "EUR", symbol: "€", rate: 0.92 },
+      { name: "Eswatini", code: "SZL", symbol: "E", rate: 17.90 },
+      { name: "Ethiopia", code: "ETB", symbol: "Br", rate: 120.00 },
+      { name: "Fiji", code: "FJD", symbol: "FJ$", rate: 2.25 },
+      { name: "Finland", code: "EUR", symbol: "€", rate: 0.92 },
+      { name: "France", code: "EUR", symbol: "€", rate: 0.92 },
+      { name: "Gabon", code: "XAF", symbol: "FCFA", rate: 605.00 },
+      { name: "Gambia", code: "GMD", symbol: "D", rate: 70.00 },
+      { name: "Georgia", code: "GEL", symbol: "₾", rate: 2.72 },
+      { name: "Germany", code: "EUR", symbol: "€", rate: 0.92 },
+      { name: "Ghana", code: "GHS", symbol: "₵", rate: 16.40 },
+      { name: "Greece", code: "EUR", symbol: "€", rate: 0.92 },
+      { name: "Grenada", code: "XCD", symbol: "EC$", rate: 2.70 },
+      { name: "Guatemala", code: "GTQ", symbol: "Q", rate: 7.72 },
+      { name: "Guinea", code: "GNF", symbol: "FG", rate: 8620.00 },
+      { name: "Guinea-Bissau", code: "XOF", symbol: "CFA", rate: 605.00 },
+      { name: "Guyana", code: "GYD", symbol: "G$", rate: 209.00 },
+      { name: "Haiti", code: "HTG", symbol: "G", rate: 131.50 },
+      { name: "Honduras", code: "HNL", symbol: "L", rate: 24.80 },
+      { name: "Hungary", code: "HUF", symbol: "Ft", rate: 376.00 },
+      { name: "Iceland", code: "ISK", symbol: "kr", rate: 138.00 },
+      { name: "India", code: "INR", symbol: "₹", rate: 84.30 },
+      { name: "Indonesia", code: "IDR", symbol: "Rp", rate: 15850.00 },
+      { name: "Iran", code: "IRR", symbol: "﷼", rate: 42000.00 },
+      { name: "Iraq", code: "IQD", symbol: "ع.د", rate: 1310.00 },
+      { name: "Ireland", code: "EUR", symbol: "€", rate: 0.92 },
+      { name: "Israel", code: "ILS", symbol: "₪", rate: 3.72 },
+      { name: "Italy", code: "EUR", symbol: "€", rate: 0.92 },
+      { name: "Jamaica", code: "JMD", symbol: "J$", rate: 157.00 },
+      { name: "Japan", code: "JPY", symbol: "¥", rate: 154.50 },
+      { name: "Jordan", code: "JOD", symbol: "JD", rate: 0.709 },
+      { name: "Kazakhstan", code: "KZT", symbol: "₸", rate: 493.00 },
+      { name: "Kenya", code: "KES", symbol: "KSh", rate: 129.00 },
+      { name: "Kiribati", code: "AUD", symbol: "A$", rate: 1.52 },
+      { name: "Kuwait", code: "KWD", symbol: "KD", rate: 0.307 },
+      { name: "Kyrgyzstan", code: "KGS", symbol: "сом", rate: 86.00 },
+      { name: "Laos", code: "LAK", symbol: "₭", rate: 21900.00 },
+      { name: "Latvia", code: "EUR", symbol: "€", rate: 0.92 },
+      { name: "Lebanon", code: "LBP", symbol: "L£", rate: 89500.00 },
+      { name: "Lesotho", code: "LSL", symbol: "L", rate: 17.90 },
+      { name: "Liberia", code: "LRD", symbol: "L$", rate: 190.00 },
+      { name: "Libya", code: "LYD", symbol: "LD", rate: 4.85 },
+      { name: "Liechtenstein", code: "CHF", symbol: "CHF", rate: 0.88 },
+      { name: "Lithuania", code: "EUR", symbol: "€", rate: 0.92 },
+      { name: "Luxembourg", code: "EUR", symbol: "€", rate: 0.92 },
+      { name: "Madagascar", code: "MGA", symbol: "Ar", rate: 4610.00 },
+      { name: "Malawi", code: "MWK", symbol: "MK", rate: 1733.00 },
+      { name: "Malaysia", code: "MYR", symbol: "RM", rate: 4.45 },
+      { name: "Maldives", code: "MVR", symbol: "Rf", rate: 15.42 },
+      { name: "Mali", code: "XOF", symbol: "CFA", rate: 605.00 },
+      { name: "Malta", code: "EUR", symbol: "€", rate: 0.92 },
+      { name: "Marshall Islands", code: "USD", symbol: "$", rate: 1.00 },
+      { name: "Mauritania", code: "MRU", symbol: "UM", rate: 39.60 },
+      { name: "Mauritius", code: "MUR", symbol: "₨", rate: 46.20 },
+      { name: "Mexico", code: "MXN", symbol: "MX$", rate: 20.20 },
+      { name: "Micronesia", code: "USD", symbol: "$", rate: 1.00 },
+      { name: "Moldova", code: "MDL", symbol: "L", rate: 17.90 },
+      { name: "Monaco", code: "EUR", symbol: "€", rate: 0.92 },
+      { name: "Mongolia", code: "MNT", symbol: "₮", rate: 3410.00 },
+      { name: "Montenegro", code: "EUR", symbol: "€", rate: 0.92 },
+      { name: "Morocco", code: "MAD", symbol: "MAD", rate: 9.95 },
+      { name: "Mozambique", code: "MZN", symbol: "MT", rate: 63.85 },
+      { name: "Myanmar", code: "MMK", symbol: "K", rate: 2100.00 },
+      { name: "Namibia", code: "NAD", symbol: "N$", rate: 17.90 },
+      { name: "Nauru", code: "AUD", symbol: "A$", rate: 1.52 },
+      { name: "Nepal", code: "NPR", symbol: "रू", rate: 134.80 },
+      { name: "Netherlands", code: "EUR", symbol: "€", rate: 0.92 },
+      { name: "New Zealand", code: "NZD", symbol: "NZ$", rate: 1.69 },
+      { name: "Nicaragua", code: "NIO", symbol: "C$", rate: 36.80 },
+      { name: "Niger", code: "XOF", symbol: "CFA", rate: 605.00 },
+      { name: "North Korea", code: "KPW", symbol: "₩", rate: 900.00 },
+      { name: "North Macedonia", code: "MKD", symbol: "ден", rate: 56.60 },
+      { name: "Norway", code: "NOK", symbol: "kr", rate: 10.95 },
+      { name: "Oman", code: "OMR", symbol: "﷼", rate: 0.385 },
+      { name: "Pakistan", code: "PKR", symbol: "₨", rate: 278.00 },
+      { name: "Palau", code: "USD", symbol: "$", rate: 1.00 },
+      { name: "Palestine", code: "ILS", symbol: "₪", rate: 3.72 },
+      { name: "Panama", code: "PAB", symbol: "B/.", rate: 1.00 },
+      { name: "Papua New Guinea", code: "PGK", symbol: "K", rate: 3.98 },
+      { name: "Paraguay", code: "PYG", symbol: "₲", rate: 7850.00 },
+      { name: "Peru", code: "PEN", symbol: "S/", rate: 3.77 },
+      { name: "Philippines", code: "PHP", symbol: "₱", rate: 58.60 },
+      { name: "Poland", code: "PLN", symbol: "zł", rate: 4.08 },
+      { name: "Portugal", code: "EUR", symbol: "€", rate: 0.92 },
+      { name: "Qatar", code: "QAR", symbol: "QR", rate: 3.64 },
+      { name: "Romania", code: "RON", symbol: "lei", rate: 4.58 },
+      { name: "Russia", code: "RUB", symbol: "₽", rate: 98.50 },
+      { name: "Rwanda", code: "RWF", symbol: "FRw", rate: 1375.00 },
+      { name: "Saint Kitts and Nevis", code: "XCD", symbol: "EC$", rate: 2.70 },
+      { name: "Saint Lucia", code: "XCD", symbol: "EC$", rate: 2.70 },
+      { name: "Saint Vincent and the Grenadines", code: "XCD", symbol: "EC$", rate: 2.70 },
+      { name: "Samoa", code: "WST", symbol: "T", rate: 2.78 },
+      { name: "San Marino", code: "EUR", symbol: "€", rate: 0.92 },
+      { name: "Sao Tome and Principe", code: "STN", symbol: "Db", rate: 22.50 },
+      { name: "Saudi Arabia", code: "SAR", symbol: "SR", rate: 3.75 },
+      { name: "Senegal", code: "XOF", symbol: "CFA", rate: 605.00 },
+      { name: "Serbia", code: "RSD", symbol: "дин.", rate: 107.80 },
+      { name: "Seychelles", code: "SCR", symbol: "₨", rate: 14.20 },
+      { name: "Sierra Leone", code: "SLE", symbol: "Le", rate: 22.60 },
+      { name: "Singapore", code: "SGD", symbol: "S$", rate: 1.34 },
+      { name: "Slovakia", code: "EUR", symbol: "€", rate: 0.92 },
+      { name: "Slovenia", code: "EUR", symbol: "€", rate: 0.92 },
+      { name: "Solomon Islands", code: "SBD", symbol: "SI$", rate: 8.35 },
+      { name: "Somalia", code: "SOS", symbol: "Sh", rate: 571.00 },
+      { name: "South Africa", code: "ZAR", symbol: "R", rate: 17.90 },
+      { name: "South Korea", code: "KRW", symbol: "₩", rate: 1390.00 },
+      { name: "South Sudan", code: "SSP", symbol: "£", rate: 3300.00 },
+      { name: "Spain", code: "EUR", symbol: "€", rate: 0.92 },
+      { name: "Sri Lanka", code: "LKR", symbol: "Rs", rate: 291.00 },
+      { name: "Sudan", code: "SDG", symbol: "ج.س.", rate: 601.00 },
+      { name: "Suriname", code: "SRD", symbol: "$", rate: 34.50 },
+      { name: "Sweden", code: "SEK", symbol: "kr", rate: 10.75 },
+      { name: "Switzerland", code: "CHF", symbol: "CHF", rate: 0.88 },
+      { name: "Syria", code: "SYP", symbol: "£S", rate: 13000.00 },
+      { name: "Taiwan", code: "TWD", symbol: "NT$", rate: 32.40 },
+      { name: "Tajikistan", code: "TJS", symbol: "SM", rate: 10.65 },
+      { name: "Tanzania", code: "TZS", symbol: "TSh", rate: 2690.00 },
+      { name: "Thailand", code: "THB", symbol: "฿", rate: 34.50 },
+      { name: "Timor-Leste", code: "USD", symbol: "$", rate: 1.00 },
+      { name: "Togo", code: "XOF", symbol: "CFA", rate: 605.00 },
+      { name: "Tonga", code: "TOP", symbol: "T$", rate: 2.38 },
+      { name: "Trinidad and Tobago", code: "TTD", symbol: "TT$", rate: 6.78 },
+      { name: "Tunisia", code: "TND", symbol: "DT", rate: 3.12 },
+      { name: "Turkey", code: "TRY", symbol: "₺", rate: 34.40 },
+      { name: "Turkmenistan", code: "TMT", symbol: "m", rate: 3.50 },
+      { name: "Tuvalu", code: "AUD", symbol: "A$", rate: 1.52 },
+      { name: "Uganda", code: "UGX", symbol: "USh", rate: 3670.00 },
+      { name: "Ukraine", code: "UAH", symbol: "₴", rate: 41.30 },
+      { name: "United Arab Emirates", code: "AED", symbol: "د.إ", rate: 3.67 },
+      { name: "Uruguay", code: "UYU", symbol: "$U", rate: 42.10 },
+      { name: "Uzbekistan", code: "UZS", symbol: "so'm", rate: 12800.00 },
+      { name: "Vanuatu", code: "VUV", symbol: "VT", rate: 119.00 },
+      { name: "Vatican City", code: "EUR", symbol: "€", rate: 0.92 },
+      { name: "Venezuela", code: "VES", symbol: "Bs.", rate: 45.20 },
+      { name: "Vietnam", code: "VND", symbol: "₫", rate: 25400.00 },
+      { name: "Yemen", code: "YER", symbol: "﷼", rate: 250.00 },
+      { name: "Zambia", code: "ZMW", symbol: "ZK", rate: 27.10 },
+      { name: "Zimbabwe", code: "ZWG", symbol: "ZiG", rate: 25.00 }
     ];
 
     const DEFAULT_CONFIG = {
