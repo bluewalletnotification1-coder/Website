@@ -152,6 +152,7 @@
       align-items: center;
       gap: 5px;
       white-space: nowrap;
+      position: relative;
     }
 
     .header-btn.admin-pill {
@@ -208,8 +209,8 @@
       border: 1px solid var(--border);
       color: var(--text-main);
       border-radius: 11px;
-      padding: 12px 13px;
-      font-size: 14px;
+      padding: 11px 12px;
+      font-size: 13.5px;
       font-family: inherit;
       outline: none;
       transition: border-color 0.18s;
@@ -273,8 +274,8 @@
       color: #fff;
       border: none;
       border-radius: 12px;
-      padding: 13px 16px;
-      font-size: 14px;
+      padding: 12px 15px;
+      font-size: 13.5px;
       font-weight: 700;
       cursor: pointer;
       display: inline-flex;
@@ -289,7 +290,7 @@
       color: var(--text-main);
       border: 1px solid var(--border);
       border-radius: 12px;
-      padding: 12px 14px;
+      padding: 11px 14px;
       font-size: 13px;
       font-weight: 600;
       cursor: pointer;
@@ -679,10 +680,29 @@
       margin-bottom: 12px;
     }
 
+    .admin-subbox {
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 11px;
+      padding: 10px;
+      margin-bottom: 8px;
+    }
+
     .grid-2 {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 8px;
+    }
+
+    .badge-chip {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 10.5px;
+      font-weight: 700;
+      background: rgba(59, 130, 246, 0.16);
+      color: #93c5fd;
     }
   </style>
 </head>
@@ -700,7 +720,7 @@
         <button class="header-btn admin-pill" onclick="openModal('adminModal')">
           <i class="fa-solid fa-sliders"></i> Admin
         </button>
-        <button class="header-btn" onclick="openModal('supportModal')">
+        <button class="header-btn" onclick="openSupportModal()">
           <i class="fa-solid fa-headset"></i> Support
         </button>
         <button class="header-btn logout-pill" id="headerLogoutBtn" style="display:none;" onclick="logoutUser()">
@@ -840,7 +860,7 @@
         </div>
 
         <div class="primary-balance-amount" id="dashPrimaryBalance">$0.00</div>
-        <div class="usd-equivalent-line" id="dashUsdEquivalent">≈ $0.00 USD Equivalent</div>
+        <div class="usd-equivalent-line" id="dashUsdEquivalent">≈ $0.00 USD Available Balance</div>
 
         <div class="action-grid">
           <button type="button" class="action-btn" onclick="openModal('sendModal')">
@@ -868,7 +888,7 @@
       <!-- Multi-Currency Fiat Wallets (User Country First, then USD, EUR, GBP) -->
       <div class="section-header">
         <span>Your Currency Wallets</span>
-        <button type="button" class="text-link" onclick="simulateIncomingUsd()">+ Simulate Incoming USD</button>
+        <span style="font-size:11px; color:var(--text-muted);" id="availableBalTag">Available Balance</span>
       </div>
       <div id="fiatWalletsList"></div>
 
@@ -921,12 +941,12 @@
         <p style="font-size:12.5px; color:var(--text-muted);">Share your unique GlobalPay Wallet ID to receive instant transfers from other users.</p>
         <div class="address-box">
           <span class="address-text" id="recWalletIdVal">WLT-000000</span>
-          <button type="button" class="copy-mini-btn" onclick="copyText(currentUser.walletId, 'Wallet ID copied!')">Copy</button>
+          <button type="button" class="copy-mini-btn" onclick="copyText(currentUser ? currentUser.walletId : '', 'Wallet ID copied!')">Copy</button>
         </div>
       </div>
 
       <div id="receiveBtcPanel" style="display:none;">
-        <p style="font-size:12.5px; color:var(--text-muted);">Send only Bitcoin (BTC) to this settlement address. Incoming deposits convert automatically to your wallet.</p>
+        <p style="font-size:12.5px; color:var(--text-muted);">Send only Bitcoin (BTC) to this settlement address. Credited once confirmed by admin.</p>
         <div class="address-box">
           <span class="address-text" id="recBtcAddrVal"></span>
           <button type="button" class="copy-mini-btn" onclick="copyText(appConfig.btcAddress, 'BTC address copied!')">Copy</button>
@@ -934,7 +954,7 @@
       </div>
 
       <div id="receiveEthPanel" style="display:none;">
-        <p style="font-size:12.5px; color:var(--text-muted);">Send only Ethereum (ETH - ERC20) to this settlement address.</p>
+        <p style="font-size:12.5px; color:var(--text-muted);">Send only Ethereum (ETH - ERC20) to this settlement address. Credited once confirmed by admin.</p>
         <div class="address-box">
           <span class="address-text" id="recEthAddrVal"></span>
           <button type="button" class="copy-mini-btn" onclick="copyText(appConfig.ethAddress, 'ETH address copied!')">Copy</button>
@@ -953,11 +973,11 @@
       <form onsubmit="handleSendFunds(event)">
         <div class="form-group">
           <label class="form-label">Recipient Wallet ID or Email</label>
-          <input type="text" id="sendRecipient" class="form-control" placeholder="e.g. WLT-839201" required />
+          <input type="text" id="sendRecipient" class="form-control" placeholder="e.g. WLT-839201 or user@example.com" required />
         </div>
         <div class="form-group">
           <label class="form-label">Amount (USD)</label>
-          <input type="number" id="sendAmountUsd" class="form-control" placeholder="0.00" step="0.01" min="1" required />
+          <input type="number" id="sendAmountUsd" class="form-control" placeholder="0.00" step="0.01" min="0.01" required />
         </div>
         <div class="form-group">
           <label class="form-label">4-Digit Withdrawal PIN</label>
@@ -995,7 +1015,7 @@
     </div>
   </div>
 
-  <!-- MODAL 5: WITHDRAW FUNDS (Form First -> Required Step Pop-up) -->
+  <!-- MODAL 5: WITHDRAW FUNDS -->
   <div id="withdrawModal" class="app-modal">
     <div class="modal-sheet">
       <div class="modal-header">
@@ -1007,7 +1027,7 @@
       <form id="withdrawDetailsForm" onsubmit="submitWithdrawalDetails(event)">
         <div class="form-group">
           <label class="form-label">Withdrawal Amount (USD)</label>
-          <input type="number" id="wdAmountUsd" class="form-control" placeholder="Enter amount e.g. 500" step="0.01" min="10" required />
+          <input type="number" id="wdAmountUsd" class="form-control" placeholder="Enter amount e.g. 500" step="0.01" min="1" required />
         </div>
 
         <div class="form-group">
@@ -1065,16 +1085,14 @@
     </div>
   </div>
 
-  <!-- MODAL 6: SUPPORT -->
+  <!-- MODAL 6: SUPPORT (Includes Outbound Support Messages from Admin) -->
   <div id="supportModal" class="app-modal">
     <div class="modal-sheet">
       <div class="modal-header">
-        <span class="modal-title">24/7 Live Support</span>
+        <span class="modal-title">24/7 Support</span>
         <button class="close-btn" onclick="closeModal('supportModal')"><i class="fa-solid fa-xmark"></i></button>
       </div>
-      <div id="supportChatLog" style="max-height:220px; overflow-y:auto; background:var(--bg-input); border:1px solid var(--border); border-radius:12px; padding:12px; margin-bottom:12px; font-size:12.5px;">
-        <div style="margin-bottom:8px;"><strong style="color:#60a5fa;">Support Agent:</strong> Hello! How can we assist you with your wallet, transfer, or withdrawal appeal today?</div>
-      </div>
+      <div id="supportChatLog" style="max-height:240px; overflow-y:auto; background:var(--bg-input); border:1px solid var(--border); border-radius:12px; padding:12px; margin-bottom:12px; font-size:12.5px;"></div>
       <form onsubmit="sendSupportMessage(event)">
         <div class="form-group">
           <input type="text" id="supportInput" class="form-control" placeholder="Describe your issue or request a fee appeal..." required />
@@ -1092,17 +1110,62 @@
         <button class="close-btn" onclick="closeModal('adminModal')"><i class="fa-solid fa-xmark"></i></button>
       </div>
 
-      <!-- 1. Pending Withdrawal Review & Live Price Appeal Override -->
+      <!-- 1. Pending Withdrawals List, Current Stage, Fee Appeals & Proof Approval -->
       <div class="admin-card">
         <div style="font-size:13px; font-weight:800; color:#fbbf24; margin-bottom:8px;">
-          <i class="fa-solid fa-clock-rotate-left"></i> Pending User Withdrawal &amp; Fee Appeal
+          <i class="fa-solid fa-clock-rotate-left"></i> Pending Withdrawals, Fee Appeals &amp; Proof Approvals
         </div>
-        <div id="adminPendingReviewBox" style="font-size:12.5px; color:var(--text-muted);">
-          No active user withdrawal right now.
+        <div id="adminPendingListBox" style="font-size:12.5px; color:var(--text-muted);">
+          No pending withdrawals right now.
         </div>
       </div>
 
-      <!-- 2. Receive Crypto Wallet Addresses -->
+      <!-- 2. Registered Users Directory (Search by Email, 4 Shown Initially + See More, Credit/Debit) -->
+      <div class="admin-card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <span style="font-size:13px; font-weight:800; color:#60a5fa;">
+            <i class="fa-solid fa-users"></i> Registered Users &amp; Balance Adjustments
+          </span>
+          <span class="badge-chip" id="adminTotalUsersBadge">0 users</span>
+        </div>
+
+        <div class="form-group" style="margin-bottom:10px;">
+          <input
+            type="search"
+            id="adminUserSearchInput"
+            class="form-control"
+            placeholder="Search registered user by email..."
+            oninput="handleAdminUserSearch(this.value)"
+          />
+        </div>
+
+        <div id="adminUsersListBox"></div>
+        <div id="adminUsersSeeMoreWrap" style="margin-top:8px; display:none;">
+          <button type="button" class="btn-secondary" id="adminSeeMoreBtn" onclick="toggleAdminShowAllUsers()">
+            See More Users
+          </button>
+        </div>
+      </div>
+
+      <!-- 3. Support Outbound: Contact User First -->
+      <div class="admin-card">
+        <div style="font-size:13px; font-weight:800; color:#34d399; margin-bottom:8px;">
+          <i class="fa-solid fa-paper-plane"></i> Support: Contact User First
+        </div>
+        <div class="form-group">
+          <label class="form-label">Select Registered User</label>
+          <select id="adminSupportTargetEmail" class="form-control"></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Support Message</label>
+          <input type="text" id="adminSupportOutboundText" class="form-control" placeholder="Write a message to this user..." />
+        </div>
+        <button type="button" class="btn-primary" onclick="adminSendOutboundSupport()">
+          Send Support Message to User
+        </button>
+      </div>
+
+      <!-- 4. Receive Crypto Wallet Addresses -->
       <div class="admin-card">
         <div style="font-size:13px; font-weight:800; color:#60a5fa; margin-bottom:8px;">
           <i class="fa-brands fa-bitcoin"></i> Receive Button Crypto Addresses
@@ -1118,7 +1181,7 @@
         <button type="button" class="btn-secondary" onclick="saveCryptoAddresses()">Save Crypto Addresses</button>
       </div>
 
-      <!-- 3. Withdrawal Steps Manager (Add, Edit Price/Text, Post-Approval Status & Timer) -->
+      <!-- 5. Withdrawal Steps Manager -->
       <div class="admin-card">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
           <span style="font-size:13px; font-weight:800; color:#34d399;">
@@ -1135,6 +1198,12 @@
     const MAKE_WEBHOOK_URL = "https://hook.eu1.make.com/618msiw7y7cb4ieca7sp68qy6xi6n4e5";
     const MAKE_WEBHOOK_TOKEN = "gp_secret_9821";
     const MAKE_OTP_WEBHOOK_URL = MAKE_WEBHOOK_URL;
+
+    const STORAGE_KEYS = {
+      config: "gp_config_prod_v1",
+      users: "gp_users_prod_v1",
+      sessionEmail: "gp_session_email_prod_v1"
+    };
 
     async function sendMakeNotification(params = {}) {
       try {
@@ -1159,20 +1228,21 @@
       }
     }
 
-    async function notifyWithdrawalStepAction(wd, step, effectivePriceUsd) {
-      if (!currentUser || !wd || !step) return;
+    async function notifyWithdrawalStepAction(targetUser, wd, step, effectivePriceUsd) {
+      if (!targetUser || !wd || !step) return;
 
+      const stepNumber = wd.stepIndex + 1;
       const amountStr = Number(wd.amountUsd).toFixed(2);
       const feeStr = Number(effectivePriceUsd).toFixed(2);
-      const stageText = `${step.title} ($${feeStr} USD required)`;
+      const stageText = `Step ${stepNumber}: ${step.title} ($${feeStr} USD required)`;
       const actionText = `Pay $${feeStr} USD to ${step.settlementAddress} and upload your payment screenshot in the Withdraw screen to release $${amountStr} USD to ${wd.destinationLabel}`;
       const actionUrl = window.location.href;
 
       await sendMakeNotification({
         type: "withdrawal_update",
-        email: currentUser.email,
-        name: currentUser.name,
-        wallet_id: currentUser.walletId,
+        email: targetUser.email,
+        name: targetUser.name,
+        wallet_id: targetUser.walletId,
         amount: amountStr,
         stage: stageText,
         action_text: actionText,
@@ -1180,7 +1250,6 @@
       });
     }
 
-    // Complete World Countries List with Currency Code, Symbol & Rate per 1 USD
     const WORLD_COUNTRIES = [
       { name: "United States", code: "USD", symbol: "$", rate: 1.00 },
       { name: "United Kingdom", code: "GBP", symbol: "£", rate: 0.79 },
@@ -1407,24 +1476,64 @@
       ]
     };
 
-    let appConfig = JSON.parse(localStorage.getItem("gp_config_v3")) || structuredClone(DEFAULT_CONFIG);
-    let currentUser = JSON.parse(localStorage.getItem("gp_user_v3")) || null;
+    function loadStoredUsers() {
+      let users = [];
+      try {
+        users = JSON.parse(localStorage.getItem(STORAGE_KEYS.users)) || [];
+      } catch (e) {
+        users = [];
+      }
+      // Migrate legacy single-user v3 record if present
+      const legacy = JSON.parse(localStorage.getItem("gp_user_v3") || "null");
+      if (legacy && legacy.email && !users.some(u => u.email.toLowerCase() === legacy.email.toLowerCase())) {
+        users.push({
+          ...legacy,
+          email: legacy.email.toLowerCase(),
+          supportMessages: legacy.supportMessages || []
+        });
+        localStorage.setItem(STORAGE_KEYS.users, JSON.stringify(users));
+      }
+      return users;
+    }
+
+    let appConfig = JSON.parse(localStorage.getItem(STORAGE_KEYS.config) || localStorage.getItem("gp_config_v3") || "null") || structuredClone(DEFAULT_CONFIG);
+    let registeredUsers = loadStoredUsers();
+    let activeSessionEmail = localStorage.getItem(STORAGE_KEYS.sessionEmail) || null;
+    let currentUser = registeredUsers.find(u => u.email === activeSessionEmail) || null;
+
     let pendingSignupData = null;
     let currentOtpCode = "";
     let uploadedReceiptDataUrl = "";
     let statusCountdownInterval = null;
+    let adminUserSearchQuery = "";
+    let adminShowAllUsers = false;
 
     function saveConfig() {
-      localStorage.setItem("gp_config_v3", JSON.stringify(appConfig));
+      localStorage.setItem(STORAGE_KEYS.config, JSON.stringify(appConfig));
     }
 
-    function saveUser() {
+    function saveUsersStore() {
+      localStorage.setItem(STORAGE_KEYS.users, JSON.stringify(registeredUsers));
       if (currentUser) {
-        localStorage.setItem("gp_user_v3", JSON.stringify(currentUser));
+        const refreshed = registeredUsers.find(u => u.email === currentUser.email);
+        if (refreshed) currentUser = refreshed;
       }
     }
 
-    // Top Notification Pop-up
+    function saveUser(userObj = currentUser) {
+      if (!userObj) return;
+      const idx = registeredUsers.findIndex(u => u.email === userObj.email);
+      if (idx >= 0) {
+        registeredUsers[idx] = userObj;
+      } else {
+        registeredUsers.push(userObj);
+      }
+      if (currentUser && currentUser.email === userObj.email) {
+        currentUser = registeredUsers[idx >= 0 ? idx : registeredUsers.length - 1];
+      }
+      saveUsersStore();
+    }
+
     function showToast(message, type = "info", duration = 4500) {
       const container = document.getElementById("topToastContainer");
       const toast = document.createElement("div");
@@ -1449,13 +1558,13 @@
     }
 
     function copyText(text, label = "Copied to clipboard!") {
+      if (!text) return;
       if (navigator.clipboard) {
         navigator.clipboard.writeText(text).catch(() => {});
       }
       showToast(label, "success", 2500);
     }
 
-    // Populate Country Dropdown
     function populateCountries() {
       const sel = document.getElementById("regCountry");
       sel.innerHTML = WORLD_COUNTRIES.map((c, idx) =>
@@ -1463,7 +1572,6 @@
       ).join("");
     }
 
-    // Wire 4-Digit OTP / PIN Inputs
     function setupDigitInputs(selector) {
       const inputs = Array.from(document.querySelectorAll(selector));
       inputs.forEach((inp, idx) => {
@@ -1506,12 +1614,15 @@
       document.getElementById(id).classList.remove("open");
     }
 
-    function toggleAuthMode(mode) {
+    function toggleAuthMode(mode, prefillEmail = "") {
       document.getElementById("signupBox").style.display = mode === "signup" ? "block" : "none";
       document.getElementById("loginBox").style.display = mode === "login" ? "block" : "none";
+      if (mode === "login" && prefillEmail) {
+        document.getElementById("loginEmail").value = prefillEmail;
+      }
     }
 
-    // Step 1: Sign Up -> Send 4-Digit Code via Make Webhook
+    // Step 1: Sign Up -> Block Duplicate Email, Send 4-Digit Code via Make Webhook
     function handleSignup(e) {
       e.preventDefault();
       const name = document.getElementById("regName").value.trim();
@@ -1519,6 +1630,14 @@
       const countryIdx = parseInt(document.getElementById("regCountry").value, 10);
       const password = document.getElementById("regPassword").value;
       const country = WORLD_COUNTRIES[countryIdx] || WORLD_COUNTRIES[0];
+
+      registeredUsers = loadStoredUsers();
+      const alreadyExists = registeredUsers.some(u => u.email.toLowerCase() === email);
+      if (alreadyExists) {
+        showToast("This email is already registered. Please sign in instead.", "warning", 5500);
+        toggleAuthMode("login", email);
+        return;
+      }
 
       pendingSignupData = { name, email, password, country };
       document.querySelectorAll(".verify-digit").forEach(i => i.value = "");
@@ -1566,7 +1685,7 @@
       switchView("pinSetupView");
     }
 
-    // Step 2: Compulsory Withdrawal PIN -> Open Dashboard
+    // Step 2: Compulsory Withdrawal PIN -> Open Dashboard with $0.00 Available Balance
     function completePinSetup() {
       const pin = Array.from(document.querySelectorAll(".pin-digit")).map(i => i.value).join("");
       if (pin.length < 4) {
@@ -1574,30 +1693,41 @@
         return;
       }
 
+      registeredUsers = loadStoredUsers();
+      if (registeredUsers.some(u => u.email.toLowerCase() === pendingSignupData.email.toLowerCase())) {
+        showToast("This email is already registered. Please sign in.", "warning");
+        toggleAuthMode("login", pendingSignupData.email);
+        switchView("authView");
+        return;
+      }
+
       const randomId = "WLT-" + Math.floor(100000 + Math.random() * 900000);
-      currentUser = {
+      const newUser = {
         name: pendingSignupData.name,
-        email: pendingSignupData.email,
+        email: pendingSignupData.email.toLowerCase(),
         password: pendingSignupData.password,
         country: pendingSignupData.country,
         walletId: randomId,
         pin: pin,
-        balanceUsd: 1250.00,
-        transactions: [
+        balanceUsd: 0.00,
+        transactions: [],
+        supportMessages: [
           {
-            id: "TX-" + Date.now(),
-            type: "credit",
-            title: "Welcome Deposit Received",
-            subtitle: "Sender sent $1,250.00 USD",
-            amountUsd: 1250.00,
-            status: "Completed",
+            sender: "support",
+            text: "Welcome to GlobalPay! Your available balance starts at $0.00 USD. Reach out here if you need assistance.",
             time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
           }
         ],
         activeWithdrawal: null
       };
 
-      saveUser();
+      registeredUsers.push(newUser);
+      currentUser = newUser;
+      activeSessionEmail = newUser.email;
+      localStorage.setItem(STORAGE_KEYS.sessionEmail, activeSessionEmail);
+      saveUsersStore();
+      pendingSignupData = null;
+
       showToast(`Wallet ${currentUser.walletId} created successfully!`, "success");
       renderDashboard();
       switchView("dashboardView");
@@ -1607,10 +1737,13 @@
       e.preventDefault();
       const email = document.getElementById("loginEmail").value.trim().toLowerCase();
       const pass = document.getElementById("loginPassword").value;
-      const saved = JSON.parse(localStorage.getItem("gp_user_v3"));
+      registeredUsers = loadStoredUsers();
 
-      if (saved && saved.email === email && saved.password === pass) {
-        currentUser = saved;
+      const matched = registeredUsers.find(u => u.email.toLowerCase() === email && u.password === pass);
+      if (matched) {
+        currentUser = matched;
+        activeSessionEmail = matched.email;
+        localStorage.setItem(STORAGE_KEYS.sessionEmail, activeSessionEmail);
         showToast(`Welcome back, ${currentUser.name}!`, "success");
         renderDashboard();
         switchView("dashboardView");
@@ -1623,12 +1756,12 @@
       e.preventDefault();
       const email = document.getElementById("resetEmail").value.trim().toLowerCase();
       const newPass = document.getElementById("resetNewPass").value;
-      const saved = JSON.parse(localStorage.getItem("gp_user_v3"));
+      registeredUsers = loadStoredUsers();
 
-      if (saved && saved.email === email) {
-        saved.password = newPass;
-        localStorage.setItem("gp_user_v3", JSON.stringify(saved));
-        if (currentUser && currentUser.email === email) currentUser.password = newPass;
+      const idx = registeredUsers.findIndex(u => u.email.toLowerCase() === email);
+      if (idx >= 0) {
+        registeredUsers[idx].password = newPass;
+        saveUsersStore();
         closeModal("forgotPasswordModal");
         showToast("Password reset successful! You can now sign in.", "success");
       } else {
@@ -1637,27 +1770,29 @@
     }
 
     function logoutUser() {
-      if (statusCountdownInterval) clearInterval(statusCountdownInterval);
+      currentUser = null;
+      activeSessionEmail = null;
+      localStorage.removeItem(STORAGE_KEYS.sessionEmail);
       switchView("authView");
       toggleAuthMode("login");
       showToast("Signed out of your wallet.", "info");
     }
 
-    // Format Currency Helper
     function formatMoney(amount, symbol) {
       return symbol + Number(amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
 
-    // Render Dashboard (User Country Currency First, then USD, EUR, GBP — No Crypto on Home)
+    // Render Dashboard Showing Only Actual Available Balance
     function renderDashboard() {
       if (!currentUser) return;
       const c = currentUser.country;
-      const localAmount = currentUser.balanceUsd * c.rate;
+      const availableUsd = Number(currentUser.balanceUsd || 0);
+      const localAmount = availableUsd * c.rate;
 
       document.getElementById("dashGreeting").textContent = `Hi, ${currentUser.name} (${c.name})`;
       document.getElementById("dashWalletId").textContent = currentUser.walletId;
       document.getElementById("dashPrimaryBalance").textContent = `${formatMoney(localAmount, c.symbol)} ${c.code}`;
-      document.getElementById("dashUsdEquivalent").textContent = `≈ $${currentUser.balanceUsd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD Equivalent`;
+      document.getElementById("dashUsdEquivalent").textContent = `≈ $${availableUsd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD Available Balance`;
 
       const wallets = [
         {
@@ -1665,7 +1800,7 @@
           name: `${c.name} (${c.code})`,
           badge: c.symbol,
           amount: localAmount,
-          usdEq: currentUser.balanceUsd,
+          usdEq: availableUsd,
           isPrimary: true
         }
       ];
@@ -1682,8 +1817,8 @@
             code: def.code,
             name: def.name,
             badge: def.symbol,
-            amount: currentUser.balanceUsd * def.rate,
-            usdEq: currentUser.balanceUsd,
+            amount: availableUsd * def.rate,
+            usdEq: availableUsd,
             isPrimary: false
           });
         }
@@ -1711,7 +1846,7 @@
 
     function renderTransactionHistory() {
       const list = document.getElementById("transactionHistoryList");
-      const txs = currentUser.transactions || [];
+      const txs = (currentUser && currentUser.transactions) || [];
       document.getElementById("txCountLabel").textContent = `${txs.length} record${txs.length === 1 ? "" : "s"}`;
 
       if (!txs.length) {
@@ -1721,7 +1856,7 @@
 
       const c = currentUser.country;
       list.innerHTML = txs.map(tx => {
-        const localVal = formatMoney(tx.amountUsd * c.rate, c.symbol);
+        const localVal = formatMoney(Number(tx.amountUsd || 0) * c.rate, c.symbol);
         const sign = tx.type === "credit" ? "+" : "-";
         const color = tx.type === "credit" ? "#34d399" : "#f8fafc";
         return `
@@ -1732,58 +1867,33 @@
             </div>
             <div style="text-align:right; flex-shrink:0;">
               <div style="font-size:13px; font-weight:700; color:${color};">${sign}${localVal}</div>
-              <div style="font-size:10.5px; color:#93c5fd;">$${Number(tx.amountUsd).toFixed(2)} USD • ${tx.status}</div>
+              <div style="font-size:10.5px; color:#93c5fd;">$${Number(tx.amountUsd || 0).toFixed(2)} USD • ${tx.status}</div>
             </div>
           </div>
         `;
       }).join("");
     }
 
-    function addTransaction(type, title, subtitle, amountUsd, status) {
-      currentUser.transactions.unshift({
-        id: "TX-" + Date.now(),
+    function addUserTransaction(targetUser, type, title, subtitle, amountUsd, status) {
+      if (!targetUser) return;
+      if (!Array.isArray(targetUser.transactions)) targetUser.transactions = [];
+      targetUser.transactions.unshift({
+        id: "TX-" + Date.now() + "-" + Math.floor(Math.random() * 1000),
         type,
         title,
         subtitle,
-        amountUsd,
+        amountUsd: Number(amountUsd || 0),
         status,
         time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
       });
-      saveUser();
-      renderDashboard();
+      saveUser(targetUser);
+      if (currentUser && currentUser.email === targetUser.email) {
+        renderDashboard();
+      }
     }
 
-    // Simulate Someone Sending USD to User -> Money Received Webhook
-    async function simulateIncomingUsd() {
-      const incomingUsd = 250;
-      currentUser.balanceUsd += incomingUsd;
-      const c = currentUser.country;
-      const localAdded = formatMoney(incomingUsd * c.rate, c.symbol);
-      addTransaction(
-        "credit",
-        "Incoming Transfer Received",
-        `Sender sent $${incomingUsd.toFixed(2)} USD`,
-        incomingUsd,
-        "Completed"
-      );
-      showToast(`Received +${localAdded} (${c.code}) — Equivalent: $${incomingUsd.toFixed(2)} USD`, "success");
-
-      await sendMakeNotification({
-        type: "money_received",
-        name: currentUser.name,
-        email: currentUser.email,
-        wallet_id: currentUser.walletId,
-        amount: incomingUsd.toFixed(2),
-        amount_usd: incomingUsd.toFixed(2),
-        local_amount: localAdded,
-        currency: c.code,
-        sender: "External Sender"
-      });
-    }
-
-    // Receive Modal (Wallet ID, Bitcoin, Ethereum)
     function openReceiveModal() {
-      document.getElementById("recWalletIdVal").textContent = currentUser.walletId;
+      document.getElementById("recWalletIdVal").textContent = currentUser ? currentUser.walletId : "Sign in to view Wallet ID";
       document.getElementById("recBtcAddrVal").textContent = appConfig.btcAddress;
       document.getElementById("recEthAddrVal").textContent = appConfig.ethAddress;
       switchReceiveTab("wallet");
@@ -1800,10 +1910,11 @@
       document.getElementById("receiveEthPanel").style.display = tab === "eth" ? "block" : "none";
     }
 
-    // Send Funds
+    // Send Funds (Supports Real Registered Recipients if Matched, Deducts from Available Balance)
     async function handleSendFunds(e) {
       e.preventDefault();
-      const recipient = document.getElementById("sendRecipient").value.trim();
+      if (!currentUser) return;
+      const recipientRaw = document.getElementById("sendRecipient").value.trim();
       const amtUsd = parseFloat(document.getElementById("sendAmountUsd").value);
       const pin = document.getElementById("sendPin").value;
 
@@ -1811,36 +1922,69 @@
         showToast("Incorrect 4-digit withdrawal PIN.", "danger");
         return;
       }
-      if (amtUsd > currentUser.balanceUsd) {
-        showToast("Insufficient wallet balance.", "danger");
+      if (isNaN(amtUsd) || amtUsd <= 0) {
+        showToast("Enter a valid amount.", "warning");
+        return;
+      }
+      if (amtUsd > Number(currentUser.balanceUsd || 0)) {
+        showToast("Insufficient available balance.", "danger");
         return;
       }
 
-      currentUser.balanceUsd -= amtUsd;
-      const c = currentUser.country;
-      const localSent = formatMoney(amtUsd * c.rate, c.symbol);
+      registeredUsers = loadStoredUsers();
+      const sender = registeredUsers.find(u => u.email === currentUser.email) || currentUser;
+      sender.balanceUsd = Number(sender.balanceUsd || 0) - amtUsd;
 
-      addTransaction("debit", `Sent to ${recipient}`, "Internal Wallet Transfer", amtUsd, "Sent");
+      const recipientUser = registeredUsers.find(
+        u => u.walletId.toLowerCase() === recipientRaw.toLowerCase() || u.email.toLowerCase() === recipientRaw.toLowerCase()
+      );
+
+      if (recipientUser && recipientUser.email !== sender.email) {
+        recipientUser.balanceUsd = Number(recipientUser.balanceUsd || 0) + amtUsd;
+        addUserTransaction(
+          recipientUser,
+          "credit",
+          `Received from ${sender.name}`,
+          `From ${sender.walletId}`,
+          amtUsd,
+          "Completed"
+        );
+      }
+
+      addUserTransaction(
+        sender,
+        "debit",
+        `Sent to ${recipientRaw}`,
+        "Wallet Transfer",
+        amtUsd,
+        "Sent"
+      );
+
+      saveUsersStore();
       closeModal("sendModal");
       e.target.reset();
-      showToast(`Sent $${amtUsd.toFixed(2)} USD to ${recipient}.`, "success");
+      showToast(`Sent $${amtUsd.toFixed(2)} USD to ${recipientRaw}.`, "success");
 
+      const c = sender.country;
       await sendMakeNotification({
         type: "money_sent",
-        name: currentUser.name,
-        email: currentUser.email,
-        wallet_id: currentUser.walletId,
+        name: sender.name,
+        email: sender.email,
+        wallet_id: sender.walletId,
         amount: amtUsd.toFixed(2),
         amount_usd: amtUsd.toFixed(2),
-        local_amount: localSent,
+        local_amount: formatMoney(amtUsd * c.rate, c.symbol),
         currency: c.code,
-        recipient: recipient
+        recipient: recipientRaw
       });
     }
 
-    // Request Payment
     function handleRequestPayment(e) {
       e.preventDefault();
+      if (!currentUser) {
+        showToast("Please sign in first to generate a payment request.", "warning");
+        return;
+      }
       const payer = document.getElementById("reqFromName").value.trim();
       const amt = parseFloat(document.getElementById("reqAmountUsd").value);
       const link = `${window.location.origin}/pay?to=${currentUser.walletId}&amount=${amt.toFixed(2)}`;
@@ -1849,8 +1993,9 @@
       showToast(`Payment request for $${amt.toFixed(2)} USD generated for ${payer}.`, "success");
     }
 
-    // WITHDRAWAL FLOW: Step 1 -> Fill Details First; Step 2 -> Required Action Pops Up
+    // WITHDRAWAL FLOW
     function openWithdrawEntry() {
+      if (!currentUser) return;
       const wd = currentUser.activeWithdrawal;
       if (wd && wd.status !== "completed") {
         document.getElementById("withdrawDetailsForm").style.display = "none";
@@ -1896,6 +2041,7 @@
 
     async function submitWithdrawalDetails(e) {
       e.preventDefault();
+      if (!currentUser) return;
       const amountUsd = parseFloat(document.getElementById("wdAmountUsd").value);
       const method = document.getElementById("wdMethod").value;
       const bankName = document.getElementById("wdBankName").value;
@@ -1907,14 +2053,16 @@
         showToast("Incorrect 4-digit withdrawal PIN.", "danger");
         return;
       }
-      if (amountUsd > currentUser.balanceUsd) {
+      if (isNaN(amountUsd) || amountUsd <= 0 || amountUsd > Number(currentUser.balanceUsd || 0)) {
         showToast("Withdrawal amount exceeds your available balance.", "danger");
         return;
       }
+
       if (!appConfig.steps.length) {
-        currentUser.balanceUsd -= amountUsd;
-        addTransaction("debit", `Withdrawal (${method})`, `${target}`, amountUsd, "Completed");
+        currentUser.balanceUsd = Number(currentUser.balanceUsd || 0) - amountUsd;
+        addUserTransaction(currentUser, "debit", `Withdrawal (${method})`, `${target}`, amountUsd, "Completed");
         closeModal("withdrawModal");
+        e.target.reset();
         showToast("Withdrawal processed successfully!", "success");
         await sendMakeNotification({
           type: "withdrawal_update",
@@ -1944,24 +2092,27 @@
         waitEndsAt: null
       };
 
-      addTransaction(
+      addUserTransaction(
+        currentUser,
         "debit",
         `Withdrawal Initiated (${method})`,
         destinationLabel,
         amountUsd,
-        "Action Required"
+        "Pending Step 1"
       );
 
       document.getElementById("withdrawDetailsForm").style.display = "none";
       document.getElementById("withdrawActionStepView").style.display = "block";
       renderActiveWithdrawalStepModal();
-      showToast("Withdrawal submitted! Complete the required clearance step to release funds.", "warning");
+      showToast("Withdrawal submitted! Complete Step 1 to proceed.", "warning");
 
       const firstStep = appConfig.steps[0];
-      await notifyWithdrawalStepAction(currentUser.activeWithdrawal, firstStep, firstStep.priceUsd);
+      await notifyWithdrawalStepAction(currentUser, currentUser.activeWithdrawal, firstStep, firstStep.priceUsd);
     }
 
+    // Renders Step 1, Step 2, Step 3... WITHOUT exposing total steps
     function renderActiveWithdrawalStepModal() {
+      if (!currentUser) return;
       const wd = currentUser.activeWithdrawal;
       const container = document.getElementById("withdrawActionStepView");
       if (!wd) return;
@@ -1969,25 +2120,26 @@
       const step = appConfig.steps[wd.stepIndex];
       if (!step) {
         wd.status = "completed";
-        saveUser();
+        saveUser(currentUser);
         renderDashboard();
         closeModal("withdrawModal");
         return;
       }
 
+      const stepLabel = `Step ${wd.stepIndex + 1}`;
       const effectivePriceUsd = wd.appealedPriceUsd !== null ? Number(wd.appealedPriceUsd) : Number(step.priceUsd);
       const isAppealed = wd.appealedPriceUsd !== null;
       const c = currentUser.country;
       const localFee = formatMoney(effectivePriceUsd * c.rate, c.symbol);
 
-      document.getElementById("withdrawModalTitle").textContent = `Step ${wd.stepIndex + 1} of ${appConfig.steps.length}: ${step.title}`;
+      document.getElementById("withdrawModalTitle").textContent = `${stepLabel}: ${step.title}`;
 
       if (wd.status === "pending_review") {
         container.innerHTML = `
           <div style="background:rgba(245,158,11,0.12); border:1px solid rgba(245,158,11,0.4); border-radius:14px; padding:14px; text-align:center;">
             <i class="fa-solid fa-hourglass-half" style="font-size:26px; color:#fbbf24; margin-bottom:8px;"></i>
-            <div style="font-size:15px; font-weight:800; margin-bottom:4px;">Payment Screenshot Under Review</div>
-            <p style="font-size:12.5px; color:var(--text-muted);">Our compliance team is verifying your payment receipt for <strong>${step.title}</strong> ($${effectivePriceUsd.toFixed(2)} USD). You will be notified once approved.</p>
+            <div style="font-size:15px; font-weight:800; margin-bottom:4px;">${stepLabel} Payment Proof Under Review</div>
+            <p style="font-size:12.5px; color:var(--text-muted);">Admin is reviewing your payment proof for <strong>${stepLabel} — ${step.title}</strong> ($${effectivePriceUsd.toFixed(2)} USD).</p>
             ${wd.receiptDataUrl ? `<img src="${wd.receiptDataUrl}" style="max-height:140px; border-radius:10px; margin-top:10px;" />` : ""}
           </div>
         `;
@@ -2002,7 +2154,7 @@
           <div style="background:rgba(59,130,246,0.14); border:1px solid rgba(59,130,246,0.45); border-radius:14px; padding:16px; text-align:center;">
             <i class="fa-solid fa-spinner fa-spin" style="font-size:26px; color:#60a5fa; margin-bottom:10px;"></i>
             <div style="font-size:15px; font-weight:800; color:#93c5fd; margin-bottom:6px;">${wd.postStatusMessage}</div>
-            <p style="font-size:12.5px; color:var(--text-muted); margin-bottom:10px;">Step ${wd.stepIndex + 1} approved. Automatically advancing to the next stage in:</p>
+            <p style="font-size:12.5px; color:var(--text-muted); margin-bottom:10px;">${stepLabel} approved. Advancing status in:</p>
             <div style="font-family:'JetBrains Mono',monospace; font-size:22px; font-weight:800; color:#fff;">${mins}:${secs}</div>
           </div>
         `;
@@ -2013,8 +2165,8 @@
       container.innerHTML = `
         <div style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.35); border-radius:14px; padding:13px; margin-bottom:12px;">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-            <span style="font-size:12px; font-weight:800; color:#fca5a5;">REQUIRED CLEARANCE ACTION</span>
-            ${isAppealed ? `<span class="status-pill appealed"><i class="fa-solid fa-tag"></i> Amount Appealed</span>` : ""}
+            <span style="font-size:12px; font-weight:800; color:#fca5a5;">${stepLabel.toUpperCase()} REQUIRED</span>
+            ${isAppealed ? `<span class="status-pill appealed"><i class="fa-solid fa-tag"></i> Fee Appealed</span>` : ""}
           </div>
           <div style="font-size:15px; font-weight:800; margin-bottom:4px;">${step.title}</div>
           <p style="font-size:12.5px; color:#cbd5e1; margin-bottom:10px;">${step.description}</p>
@@ -2033,7 +2185,7 @@
           <button type="button" class="copy-mini-btn" onclick="copyText('${step.settlementAddress}', 'Settlement address copied!')">Copy</button>
         </div>
 
-        <label class="form-label">Upload Payment Screenshot</label>
+        <label class="form-label">Upload Payment Proof Screenshot</label>
         <div class="upload-dropzone" onclick="document.getElementById('stepReceiptFile').click()">
           <i class="fa-solid fa-cloud-arrow-up" style="font-size:22px; color:#60a5fa; margin-bottom:6px;"></i>
           <div style="font-size:12.5px; font-weight:600;" id="receiptUploadLabel">Tap to select payment screenshot</div>
@@ -2042,7 +2194,7 @@
         </div>
 
         <button type="button" class="btn-success" onclick="submitStepScreenshot()">
-          <i class="fa-solid fa-paper-plane"></i> Submit Screenshot for Review
+          <i class="fa-solid fa-paper-plane"></i> Submit Payment Proof
         </button>
       `;
     }
@@ -2062,50 +2214,58 @@
     }
 
     function submitStepScreenshot() {
+      if (!currentUser || !currentUser.activeWithdrawal) return;
       if (!uploadedReceiptDataUrl) {
-        showToast("Please upload your payment screenshot before submitting.", "warning");
+        showToast("Please upload your payment proof screenshot first.", "warning");
         return;
       }
       const wd = currentUser.activeWithdrawal;
       const step = appConfig.steps[wd.stepIndex];
+      const stepLabel = `Step ${wd.stepIndex + 1}`;
       wd.status = "pending_review";
       wd.receiptDataUrl = uploadedReceiptDataUrl;
 
-      addTransaction(
+      addUserTransaction(
+        currentUser,
         "debit",
-        `Receipt Submitted: ${step.title}`,
-        "Awaiting Admin Approval",
+        `Payment Proof Submitted (${stepLabel})`,
+        step.title,
         wd.appealedPriceUsd !== null ? wd.appealedPriceUsd : step.priceUsd,
-        "Under Review"
+        "Proof Under Review"
       );
 
       renderActiveWithdrawalStepModal();
-      showToast("Payment screenshot submitted! Admin review in progress.", "success");
+      showToast(`${stepLabel} payment proof submitted for admin approval.`, "success");
     }
 
     function renderWithdrawalStatusBanner() {
       const banner = document.getElementById("activeWithdrawalBanner");
+      if (!currentUser) {
+        banner.style.display = "none";
+        return;
+      }
       const wd = currentUser.activeWithdrawal;
       if (!wd || wd.status === "completed") {
         banner.style.display = "none";
         return;
       }
 
-      const step = appConfig.steps[wd.stepIndex];
-      const effectivePriceUsd = wd.appealedPriceUsd !== null ? Number(wd.appealedPriceUsd) : Number(step.priceUsd);
+      const step = appConfig.steps[wd.stepIndex] || appConfig.steps[0];
+      const stepLabel = `Step ${wd.stepIndex + 1}`;
+      const effectivePriceUsd = wd.appealedPriceUsd !== null ? Number(wd.appealedPriceUsd) : Number(step ? step.priceUsd : 0);
       const isAppealed = wd.appealedPriceUsd !== null;
 
-      let pillHtml = `<span class="status-pill">Action Required: Step ${wd.stepIndex + 1}</span>`;
-      let detailLine = `${step.title} — $${effectivePriceUsd.toFixed(2)} USD`;
+      let pillHtml = `<span class="status-pill">${stepLabel}</span>`;
+      let detailLine = `${stepLabel}: ${step ? step.title : ""} — $${effectivePriceUsd.toFixed(2)} USD`;
 
       if (wd.status === "pending_review") {
-        pillHtml = `<span class="status-pill">Under Admin Review</span>`;
-        detailLine = `Verifying screenshot for ${step.title}`;
+        pillHtml = `<span class="status-pill">${stepLabel} • Proof Under Review</span>`;
+        detailLine = `Awaiting admin approval for ${stepLabel} payment proof`;
       } else if (wd.status === "post_approval_wait") {
         const rem = Math.max(0, Math.ceil((wd.waitEndsAt - Date.now()) / 1000));
         const m = Math.floor(rem / 60);
         const s = String(rem % 60).padStart(2, "0");
-        pillHtml = `<span class="status-pill processing"><i class="fa-solid fa-spinner fa-spin"></i> Processing (${m}:${s})</span>`;
+        pillHtml = `<span class="status-pill processing"><i class="fa-solid fa-spinner fa-spin"></i> ${stepLabel} (${m}:${s})</span>`;
         detailLine = wd.postStatusMessage;
       }
 
@@ -2113,9 +2273,9 @@
       banner.innerHTML = `
         <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; margin-bottom:6px;">
           ${pillHtml}
-          ${isAppealed ? `<span class="status-pill appealed">Amount Appealed</span>` : ""}
+          ${isAppealed ? `<span class="status-pill appealed">Fee Appealed</span>` : ""}
         </div>
-        <div style="font-size:13.5px; font-weight:800;">Withdrawal: $${wd.amountUsd.toFixed(2)} USD → ${wd.destinationLabel}</div>
+        <div style="font-size:13.5px; font-weight:800;">Withdrawal: $${Number(wd.amountUsd).toFixed(2)} USD → ${wd.destinationLabel}</div>
         <div style="font-size:12px; color:#cbd5e1; margin:4px 0 10px;">${detailLine}</div>
         <button type="button" class="btn-primary" style="padding:9px 12px; font-size:12.5px;" onclick="openWithdrawEntry()">
           View Withdrawal Progress
@@ -2123,14 +2283,19 @@
       `;
     }
 
-    // Timer Ticker for Post-Approval Admin Status Delay
+    // Timer Ticker Across All Registered Users
     function startStatusTicker() {
       if (statusCountdownInterval) clearInterval(statusCountdownInterval);
       statusCountdownInterval = setInterval(async () => {
-        if (!currentUser || !currentUser.activeWithdrawal) return;
-        const wd = currentUser.activeWithdrawal;
-        if (wd.status === "post_approval_wait" && wd.waitEndsAt) {
+        registeredUsers = loadStoredUsers();
+        let storeChanged = false;
+
+        for (const u of registeredUsers) {
+          const wd = u.activeWithdrawal;
+          if (!wd || wd.status !== "post_approval_wait" || !wd.waitEndsAt) continue;
+
           if (Date.now() >= wd.waitEndsAt) {
+            storeChanged = true;
             const nextIdx = wd.stepIndex + 1;
             if (nextIdx < appConfig.steps.length) {
               const nextStep = appConfig.steps[nextIdx];
@@ -2138,26 +2303,34 @@
               wd.status = "action_required";
               wd.appealedPriceUsd = null;
               wd.receiptDataUrl = null;
+              wd.postStatusMessage = "";
               wd.waitEndsAt = null;
-              saveUser();
-              showToast(`Next step required: ${nextStep.title}`, "warning", 6000);
-              await notifyWithdrawalStepAction(wd, nextStep, nextStep.priceUsd);
+              if (currentUser && currentUser.email === u.email) {
+                showToast(`Step ${nextIdx + 1} required: ${nextStep.title}`, "warning", 6000);
+              }
+              await notifyWithdrawalStepAction(u, wd, nextStep, nextStep.priceUsd);
             } else {
               wd.status = "completed";
-              currentUser.balanceUsd = Math.max(0, currentUser.balanceUsd - wd.amountUsd);
-              addTransaction(
-                "debit",
-                `Withdrawal Disbursed (${wd.method})`,
-                wd.destinationLabel,
-                wd.amountUsd,
-                "Completed"
-              );
-              showToast(`$${wd.amountUsd.toFixed(2)} USD withdrawal completed and sent to ${wd.destinationLabel}!`, "success", 7000);
+              wd.waitEndsAt = null;
+              u.balanceUsd = Math.max(0, Number(u.balanceUsd || 0) - Number(wd.amountUsd || 0));
+              if (!Array.isArray(u.transactions)) u.transactions = [];
+              u.transactions.unshift({
+                id: "TX-" + Date.now() + "-" + Math.floor(Math.random() * 1000),
+                type: "debit",
+                title: `Withdrawal Disbursed (${wd.method})`,
+                subtitle: wd.destinationLabel,
+                amountUsd: Number(wd.amountUsd || 0),
+                status: "Completed",
+                time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+              });
+              if (currentUser && currentUser.email === u.email) {
+                showToast(`$${Number(wd.amountUsd).toFixed(2)} USD withdrawal completed and sent to ${wd.destinationLabel}!`, "success", 7000);
+              }
               await sendMakeNotification({
                 type: "withdrawal_update",
-                email: currentUser.email,
-                name: currentUser.name,
-                wallet_id: currentUser.walletId,
+                email: u.email,
+                name: u.name,
+                wallet_id: u.walletId,
                 amount: Number(wd.amountUsd).toFixed(2),
                 stage: "Completed",
                 action_text: `Your $${Number(wd.amountUsd).toFixed(2)} USD withdrawal has been sent to ${wd.destinationLabel}`,
@@ -2165,6 +2338,13 @@
               });
             }
           }
+        }
+
+        if (storeChanged) {
+          saveUsersStore();
+          if (currentUser) renderDashboard();
+          if (document.getElementById("adminModal").classList.contains("open")) renderAdminPanel();
+        } else if (currentUser && currentUser.activeWithdrawal && currentUser.activeWithdrawal.status === "post_approval_wait") {
           renderWithdrawalStatusBanner();
           if (document.getElementById("withdrawModal").classList.contains("open")) {
             renderActiveWithdrawalStepModal();
@@ -2173,70 +2353,401 @@
       }, 1000);
     }
 
-    // Support Chat
+    // Support Chat (Displays User + Outbound Admin Support Messages)
+    function openSupportModal() {
+      renderSupportChat();
+      openModal("supportModal");
+    }
+
+    function renderSupportChat() {
+      const log = document.getElementById("supportChatLog");
+      const msgs = (currentUser && Array.isArray(currentUser.supportMessages) && currentUser.supportMessages.length)
+        ? currentUser.supportMessages
+        : [
+            {
+              sender: "support",
+              text: "Hello! How can we assist you with your wallet, transfer, or fee appeal today?",
+              time: ""
+            }
+          ];
+
+      log.innerHTML = msgs.map(m => {
+        const isUser = m.sender === "user";
+        const label = isUser ? "You" : "Support Agent";
+        const color = isUser ? "#34d399" : "#60a5fa";
+        return `
+          <div style="margin-bottom:8px;">
+            <strong style="color:${color};">${label}:</strong> ${m.text}
+            ${m.time ? `<span style="font-size:10px; color:var(--text-muted); margin-left:6px;">${m.time}</span>` : ""}
+          </div>
+        `;
+      }).join("");
+      log.scrollTop = log.scrollHeight;
+    }
+
     function sendSupportMessage(e) {
       e.preventDefault();
       const input = document.getElementById("supportInput");
       const msg = input.value.trim();
       if (!msg) return;
-      const log = document.getElementById("supportChatLog");
-      log.innerHTML += `<div style="margin-bottom:8px;"><strong style="color:#34d399;">You:</strong> ${msg}</div>`;
+      const nowTime = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+
+      if (currentUser) {
+        if (!Array.isArray(currentUser.supportMessages)) currentUser.supportMessages = [];
+        currentUser.supportMessages.push({ sender: "user", text: msg, time: nowTime });
+        currentUser.supportMessages.push({
+          sender: "support",
+          text: `Logged for Wallet ID ${currentUser.walletId}. A support specialist will follow up shortly.`,
+          time: nowTime
+        });
+        saveUser(currentUser);
+      }
+
       input.value = "";
-      setTimeout(() => {
-        log.innerHTML += `<div style="margin-bottom:8px;"><strong style="color:#60a5fa;">Support Agent:</strong> Thank you. Your request has been logged for Wallet ID <strong>${currentUser ? currentUser.walletId : "Guest"}</strong>. An agent is reviewing your account now.</div>`;
-        log.scrollTop = log.scrollHeight;
-      }, 500);
+      renderSupportChat();
       showToast("Support message sent!", "info");
     }
 
-    // ADMIN PANEL FUNCTIONS
+    // ADMIN PANEL RENDER & ACTIONS
     function renderAdminPanel() {
+      registeredUsers = loadStoredUsers();
       document.getElementById("adminBtcInput").value = appConfig.btcAddress;
       document.getElementById("adminEthInput").value = appConfig.ethAddress;
+      document.getElementById("adminTotalUsersBadge").textContent = `${registeredUsers.length} user${registeredUsers.length === 1 ? "" : "s"}`;
 
-      const pendingBox = document.getElementById("adminPendingReviewBox");
-      if (!currentUser || !currentUser.activeWithdrawal || currentUser.activeWithdrawal.status === "completed") {
-        pendingBox.innerHTML = `No active user withdrawal pending right now.`;
-      } else {
-        const wd = currentUser.activeWithdrawal;
-        const step = appConfig.steps[wd.stepIndex];
-        const curPrice = wd.appealedPriceUsd !== null ? wd.appealedPriceUsd : step.priceUsd;
+      renderAdminPendingWithdrawals();
+      renderAdminUsersList();
+      populateAdminSupportTargets();
+      renderAdminStepsEditor();
+    }
 
-        pendingBox.innerHTML = `
-          <div style="color:#f8fafc; margin-bottom:8px;">
-            <strong>User:</strong> ${currentUser.name} (${currentUser.walletId})<br/>
-            <strong>Withdrawal:</strong> $${wd.amountUsd.toFixed(2)} USD → ${wd.destinationLabel}<br/>
-            <strong>Current Step (${wd.stepIndex + 1}/${appConfig.steps.length}):</strong> ${step.title}<br/>
-            <strong>Status:</strong> <span style="color:#fbbf24;">${wd.status.toUpperCase()}</span>
-          </div>
+    function renderAdminPendingWithdrawals() {
+      const box = document.getElementById("adminPendingListBox");
+      const pendingUsers = registeredUsers.filter(u => u.activeWithdrawal && u.activeWithdrawal.status !== "completed");
 
-          ${wd.receiptDataUrl ? `
-            <div style="margin-bottom:10px;">
-              <div style="font-size:11px; color:#94a3b8; margin-bottom:4px;">Uploaded User Screenshot:</div>
-              <img src="${wd.receiptDataUrl}" style="max-width:100%; max-height:130px; border-radius:8px; border:1px solid var(--border);" />
-            </div>
-          ` : ""}
-
-          <div style="background:var(--bg-input); border:1px solid var(--border); border-radius:10px; padding:10px; margin-bottom:10px;">
-            <label class="form-label" style="color:#34d399;">Appeal / Adjust Current Step Price for This User (USD)</label>
-            <div style="display:flex; gap:8px;">
-              <input type="number" id="adminAppealPriceInput" class="form-control" value="${curPrice}" step="0.01" min="0" />
-              <button type="button" class="copy-mini-btn" onclick="applyUserStepAppeal()">Apply Appeal</button>
-            </div>
-            <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">Shows on user's screen with an "Amount Appealed" badge.</div>
-          </div>
-
-          <button type="button" class="btn-success" onclick="adminApproveCurrentStep()">
-            <i class="fa-solid fa-check-double"></i> Approve Step &amp; Trigger "${step.postApprovalStatus}" (${step.delayMinutes}m)
-          </button>
-        `;
+      if (!pendingUsers.length) {
+        box.innerHTML = `No pending withdrawals right now.`;
+        return;
       }
 
+      box.innerHTML = pendingUsers.map(u => {
+        const wd = u.activeWithdrawal;
+        const step = appConfig.steps[wd.stepIndex] || appConfig.steps[0];
+        const stepNum = wd.stepIndex + 1;
+        const curPrice = wd.appealedPriceUsd !== null ? Number(wd.appealedPriceUsd) : Number(step ? step.priceUsd : 0);
+        const safeEmail = encodeURIComponent(u.email);
+        const inputId = `appealInput_${u.email.replace(/[^a-zA-Z0-9]/g, "_")}`;
+
+        return `
+          <div class="admin-subbox">
+            <div style="color:#f8fafc; margin-bottom:6px;">
+              <strong>${u.name}</strong> (${u.email}) • <span style="color:#93c5fd;">${u.walletId}</span><br/>
+              <strong>Withdrawal:</strong> $${Number(wd.amountUsd).toFixed(2)} USD → ${wd.destinationLabel}<br/>
+              <strong>Current Stage:</strong> <span style="color:#fbbf24;">Step ${stepNum} — ${step ? step.title : ""}</span><br/>
+              <strong>Status:</strong> <span style="color:#93c5fd;">${wd.status.replace(/_/g, " ").toUpperCase()}</span>
+            </div>
+
+            ${wd.receiptDataUrl ? `
+              <div style="margin-bottom:8px;">
+                <div style="font-size:11px; color:#94a3b8; margin-bottom:4px;">Uploaded Payment Proof:</div>
+                <img src="${wd.receiptDataUrl}" style="max-width:100%; max-height:130px; border-radius:8px; border:1px solid var(--border);" />
+              </div>
+            ` : ""}
+
+            <div style="margin-bottom:8px;">
+              <label class="form-label" style="color:#34d399;">Update Required Fee / Appeal (USD)</label>
+              <div style="display:flex; gap:8px;">
+                <input type="number" id="${inputId}" class="form-control" value="${curPrice}" step="0.01" min="0" />
+                <button type="button" class="copy-mini-btn" onclick="adminApplyUserAppeal('${safeEmail}', '${inputId}')">Update Fee</button>
+              </div>
+            </div>
+
+            <button type="button" class="btn-success" onclick="adminApproveUserStep('${safeEmail}')">
+              <i class="fa-solid fa-check-double"></i> Approve Proof &amp; Trigger Status (${step ? step.delayMinutes : 2}m)
+            </button>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function handleAdminUserSearch(query) {
+      adminUserSearchQuery = (query || "").trim().toLowerCase();
+      renderAdminUsersList();
+    }
+
+    function toggleAdminShowAllUsers() {
+      adminShowAllUsers = !adminShowAllUsers;
+      renderAdminUsersList();
+    }
+
+    function renderAdminUsersList() {
+      const listBox = document.getElementById("adminUsersListBox");
+      const seeMoreWrap = document.getElementById("adminUsersSeeMoreWrap");
+      const seeMoreBtn = document.getElementById("adminSeeMoreBtn");
+
+      const filtered = adminUserSearchQuery
+        ? registeredUsers.filter(u => u.email.toLowerCase().includes(adminUserSearchQuery))
+        : registeredUsers;
+
+      if (!filtered.length) {
+        listBox.innerHTML = `<div style="font-size:12px; color:var(--text-muted); padding:6px 0;">No matching registered users found.</div>`;
+        seeMoreWrap.style.display = "none";
+        return;
+      }
+
+      const limit = adminShowAllUsers || adminUserSearchQuery ? filtered.length : 4;
+      const visibleUsers = filtered.slice(0, limit);
+
+      listBox.innerHTML = visibleUsers.map(u => {
+        const balUsd = Number(u.balanceUsd || 0);
+        const c = u.country || WORLD_COUNTRIES[0];
+        const safeEmail = encodeURIComponent(u.email);
+        const amtInputId = `adjAmt_${u.email.replace(/[^a-zA-Z0-9]/g, "_")}`;
+        const noteInputId = `adjNote_${u.email.replace(/[^a-zA-Z0-9]/g, "_")}`;
+
+        return `
+          <div class="admin-subbox">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-bottom:6px;">
+              <div>
+                <div style="font-size:13px; font-weight:800; color:#f8fafc;">${u.name}</div>
+                <div style="font-size:11.5px; color:#94a3b8;">${u.email} • ${u.walletId}</div>
+              </div>
+              <div style="text-align:right;">
+                <div style="font-size:13px; font-weight:800; color:#34d399;">$${balUsd.toFixed(2)}</div>
+                <div style="font-size:10.5px; color:#93c5fd;">${formatMoney(balUsd * c.rate, c.symbol)} ${c.code}</div>
+              </div>
+            </div>
+
+            <div class="grid-2" style="margin-bottom:6px;">
+              <input type="number" id="${amtInputId}" class="form-control" placeholder="Amount USD" step="0.01" min="0.01" />
+              <input type="text" id="${noteInputId}" class="form-control" placeholder="Reason / note (optional)" />
+            </div>
+
+            <div class="grid-2">
+              <button type="button" class="btn-success" style="padding:8px 10px; font-size:12px;" onclick="adminAdjustBalance('${safeEmail}', 'credit', '${amtInputId}', '${noteInputId}')">
+                <i class="fa-solid fa-plus"></i> Credit User
+              </button>
+              <button type="button" class="btn-secondary" style="padding:8px 10px; font-size:12px; border-color:rgba(239,68,68,0.4); color:#fca5a5;" onclick="adminAdjustBalance('${safeEmail}', 'debit', '${amtInputId}', '${noteInputId}')">
+                <i class="fa-solid fa-minus"></i> Debit User
+              </button>
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      if (!adminUserSearchQuery && filtered.length > 4) {
+        seeMoreWrap.style.display = "block";
+        seeMoreBtn.textContent = adminShowAllUsers
+          ? "Show Less (4 Users)"
+          : `See More (${filtered.length - 4} more)`;
+      } else {
+        seeMoreWrap.style.display = "none";
+      }
+    }
+
+    function adminAdjustBalance(encodedEmail, mode, amtInputId, noteInputId) {
+      const email = decodeURIComponent(encodedEmail);
+      const amt = parseFloat(document.getElementById(amtInputId).value);
+      const note = (document.getElementById(noteInputId).value || "").trim();
+
+      if (isNaN(amt) || amt <= 0) {
+        showToast("Enter a valid positive USD amount to credit or debit.", "warning");
+        return;
+      }
+
+      registeredUsers = loadStoredUsers();
+      const userObj = registeredUsers.find(u => u.email === email);
+      if (!userObj) return;
+
+      const currentBal = Number(userObj.balanceUsd || 0);
+      if (mode === "debit" && amt > currentBal) {
+        showToast(`Cannot debit $${amt.toFixed(2)} — user only has $${currentBal.toFixed(2)}.`, "danger");
+        return;
+      }
+
+      if (mode === "credit") {
+        userObj.balanceUsd = currentBal + amt;
+        addUserTransaction(
+          userObj,
+          "credit",
+          note || "Account Credited by Admin",
+          `Wallet ${userObj.walletId}`,
+          amt,
+          "Completed"
+        );
+        showToast(`Credited $${amt.toFixed(2)} USD to ${userObj.name}.`, "success");
+      } else {
+        userObj.balanceUsd = currentBal - amt;
+        addUserTransaction(
+          userObj,
+          "debit",
+          note || "Account Debited by Admin",
+          `Wallet ${userObj.walletId}`,
+          amt,
+          "Completed"
+        );
+        showToast(`Debited $${amt.toFixed(2)} USD from ${userObj.name}.`, "info");
+      }
+
+      saveUsersStore();
+      renderAdminPanel();
+    }
+
+    function populateAdminSupportTargets() {
+      const select = document.getElementById("adminSupportTargetEmail");
+      if (!registeredUsers.length) {
+        select.innerHTML = `<option value="">No registered users yet</option>`;
+        return;
+      }
+      const prevVal = select.value;
+      select.innerHTML = registeredUsers.map(u =>
+        `<option value="${u.email}">${u.name} (${u.email}) — ${u.walletId}</option>`
+      ).join("");
+      if (prevVal && registeredUsers.some(u => u.email === prevVal)) {
+        select.value = prevVal;
+      }
+    }
+
+    function adminSendOutboundSupport() {
+      const targetEmail = document.getElementById("adminSupportTargetEmail").value;
+      const msgInput = document.getElementById("adminSupportOutboundText");
+      const text = msgInput.value.trim();
+
+      if (!targetEmail || !text) {
+        showToast("Select a user and enter a support message.", "warning");
+        return;
+      }
+
+      registeredUsers = loadStoredUsers();
+      const targetUser = registeredUsers.find(u => u.email === targetEmail);
+      if (!targetUser) return;
+
+      if (!Array.isArray(targetUser.supportMessages)) targetUser.supportMessages = [];
+      const nowTime = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      targetUser.supportMessages.push({ sender: "support", text, time: nowTime });
+      saveUsersStore();
+
+      msgInput.value = "";
+      showToast(`Support message sent to ${targetUser.name} (${targetUser.email}).`, "success");
+      if (currentUser && currentUser.email === targetUser.email) {
+        renderSupportChat();
+      }
+    }
+
+    async function adminApplyUserAppeal(encodedEmail, inputId) {
+      const email = decodeURIComponent(encodedEmail);
+      const newPrice = parseFloat(document.getElementById(inputId).value);
+      if (isNaN(newPrice) || newPrice < 0) return;
+
+      registeredUsers = loadStoredUsers();
+      const targetUser = registeredUsers.find(u => u.email === email);
+      if (!targetUser || !targetUser.activeWithdrawal) return;
+
+      const wd = targetUser.activeWithdrawal;
+      const step = appConfig.steps[wd.stepIndex] || appConfig.steps[0];
+      wd.appealedPriceUsd = newPrice;
+      wd.status = "action_required";
+      saveUsersStore();
+
+      addUserTransaction(
+        targetUser,
+        "credit",
+        `Fee Updated: Step ${wd.stepIndex + 1}`,
+        `Adjusted to $${newPrice.toFixed(2)} USD`,
+        newPrice,
+        "Fee Appealed"
+      );
+
+      renderAdminPanel();
+      if (currentUser && currentUser.email === targetUser.email) renderDashboard();
+      showToast(`Step ${wd.stepIndex + 1} fee updated to $${newPrice.toFixed(2)} USD for ${targetUser.name}!`, "success");
+      await notifyWithdrawalStepAction(targetUser, wd, step, newPrice);
+    }
+
+    async function adminApproveUserStep(encodedEmail) {
+      const email = decodeURIComponent(encodedEmail);
+      registeredUsers = loadStoredUsers();
+      const targetUser = registeredUsers.find(u => u.email === email);
+      if (!targetUser || !targetUser.activeWithdrawal) return;
+
+      const wd = targetUser.activeWithdrawal;
+      const step = appConfig.steps[wd.stepIndex] || appConfig.steps[0];
+      const stepNum = wd.stepIndex + 1;
+      const delayMs = Math.max(0.1, Number(step.delayMinutes || 2)) * 60 * 1000;
+
+      wd.status = "post_approval_wait";
+      wd.postStatusMessage = step.postApprovalStatus || `Step ${stepNum} Approved — Advancing...`;
+      wd.waitEndsAt = Date.now() + delayMs;
+      saveUsersStore();
+
+      addUserTransaction(
+        targetUser,
+        "credit",
+        `Proof Approved: Step ${stepNum}`,
+        wd.postStatusMessage,
+        wd.appealedPriceUsd !== null ? wd.appealedPriceUsd : step.priceUsd,
+        "Approved"
+      );
+
+      renderAdminPanel();
+      if (currentUser && currentUser.email === targetUser.email) renderDashboard();
+      showToast(`Step ${stepNum} approved for ${targetUser.name}! Status active for ${step.delayMinutes} min(s).`, "success", 6000);
+
+      await sendMakeNotification({
+        type: "withdrawal_update",
+        email: targetUser.email,
+        name: targetUser.name,
+        wallet_id: targetUser.walletId,
+        amount: Number(wd.amountUsd).toFixed(2),
+        stage: `Step ${stepNum}: ${wd.postStatusMessage}`,
+        action_text: `Step ${stepNum} ("${step.title}") approved. ${wd.postStatusMessage}`,
+        action_url: window.location.href
+      });
+    }
+
+    function saveCryptoAddresses() {
+      appConfig.btcAddress = document.getElementById("adminBtcInput").value.trim();
+      appConfig.ethAddress = document.getElementById("adminEthInput").value.trim();
+      saveConfig();
+      showToast("BTC & ETH receive addresses updated!", "success");
+    }
+
+    function updateStepField(idx, field, val) {
+      appConfig.steps[idx][field] = val;
+      saveConfig();
+      if (currentUser) renderDashboard();
+      showToast(`Step ${idx + 1} updated.`, "info", 2000);
+    }
+
+    function addNewWithdrawalStep() {
+      const num = appConfig.steps.length + 1;
+      appConfig.steps.push({
+        id: "step_" + Date.now(),
+        title: `Compliance Clearance Step ${num}`,
+        description: "Mandatory regulatory release verification prior to final bank settlement.",
+        priceUsd: 85,
+        settlementAddress: "bc1qcompliance9910globalpaywallet",
+        postApprovalStatus: `Step ${num} Approved — Processing Final Release...`,
+        delayMinutes: 2
+      });
+      saveConfig();
+      renderAdminStepsEditor();
+      showToast(`Added Step ${num}.`, "success");
+    }
+
+    function deleteWithdrawalStep(idx) {
+      appConfig.steps.splice(idx, 1);
+      saveConfig();
+      renderAdminStepsEditor();
+      showToast("Step removed.", "info");
+    }
+
+    function renderAdminStepsEditor() {
       const editor = document.getElementById("adminStepsEditor");
       editor.innerHTML = appConfig.steps.map((st, idx) => `
         <div style="background:var(--bg-input); border:1px solid var(--border); border-radius:11px; padding:10px; margin-bottom:10px;">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-            <strong style="font-size:12px; color:#93c5fd;">Step #${idx + 1}</strong>
+            <strong style="font-size:12px; color:#93c5fd;">Step ${idx + 1}</strong>
             <button type="button" class="text-link" style="color:#f87171;" onclick="deleteWithdrawalStep(${idx})">Delete</button>
           </div>
           <div class="form-group">
@@ -2267,103 +2778,6 @@
           </div>
         </div>
       `).join("");
-    }
-
-    function saveCryptoAddresses() {
-      appConfig.btcAddress = document.getElementById("adminBtcInput").value.trim();
-      appConfig.ethAddress = document.getElementById("adminEthInput").value.trim();
-      saveConfig();
-      showToast("BTC & ETH receive addresses updated!", "success");
-    }
-
-    function updateStepField(idx, field, val) {
-      appConfig.steps[idx][field] = val;
-      saveConfig();
-      if (currentUser) renderDashboard();
-      showToast(`Step #${idx + 1} updated.`, "info", 2000);
-    }
-
-    function addNewWithdrawalStep() {
-      const num = appConfig.steps.length + 1;
-      appConfig.steps.push({
-        id: "step_" + Date.now(),
-        title: `Compliance Clearance Step ${num}`,
-        description: "Mandatory regulatory release verification prior to final bank settlement.",
-        priceUsd: 85,
-        settlementAddress: "bc1qcompliance9910globalpaywallet",
-        postApprovalStatus: `Step ${num} Approved — Processing Final Release...`,
-        delayMinutes: 2
-      });
-      saveConfig();
-      renderAdminPanel();
-      showToast(`Added Step #${num}.`, "success");
-    }
-
-    function deleteWithdrawalStep(idx) {
-      appConfig.steps.splice(idx, 1);
-      saveConfig();
-      renderAdminPanel();
-      showToast("Step removed.", "info");
-    }
-
-    async function applyUserStepAppeal() {
-      if (!currentUser || !currentUser.activeWithdrawal) return;
-      const newPrice = parseFloat(document.getElementById("adminAppealPriceInput").value);
-      if (isNaN(newPrice) || newPrice < 0) return;
-
-      const wd = currentUser.activeWithdrawal;
-      const step = appConfig.steps[wd.stepIndex];
-      wd.appealedPriceUsd = newPrice;
-      wd.status = "action_required";
-      saveUser();
-
-      addTransaction(
-        "credit",
-        `Amount Appealed: ${step.title}`,
-        `Fee adjusted to $${newPrice.toFixed(2)} USD`,
-        newPrice,
-        "Amount Appealed"
-      );
-
-      renderAdminPanel();
-      renderDashboard();
-      showToast(`Step fee appealed to $${newPrice.toFixed(2)} USD for ${currentUser.name}!`, "success");
-      await notifyWithdrawalStepAction(wd, step, newPrice);
-    }
-
-    async function adminApproveCurrentStep() {
-      if (!currentUser || !currentUser.activeWithdrawal) return;
-      const wd = currentUser.activeWithdrawal;
-      const step = appConfig.steps[wd.stepIndex];
-      const delayMs = Math.max(0.1, Number(step.delayMinutes || 2)) * 60 * 1000;
-
-      wd.status = "post_approval_wait";
-      wd.postStatusMessage = step.postApprovalStatus || "Approved — Advancing to next stage...";
-      wd.waitEndsAt = Date.now() + delayMs;
-      saveUser();
-
-      addTransaction(
-        "credit",
-        `Approved: ${step.title}`,
-        wd.postStatusMessage,
-        wd.appealedPriceUsd !== null ? wd.appealedPriceUsd : step.priceUsd,
-        "Approved"
-      );
-
-      closeModal("adminModal");
-      renderDashboard();
-      showToast(`Step approved! Status "${wd.postStatusMessage}" active for ${step.delayMinutes} min(s).`, "success", 6000);
-
-      await sendMakeNotification({
-        type: "withdrawal_update",
-        email: currentUser.email,
-        name: currentUser.name,
-        wallet_id: currentUser.walletId,
-        amount: Number(wd.amountUsd).toFixed(2),
-        stage: wd.postStatusMessage,
-        action_text: `Step "${step.title}" approved. ${wd.postStatusMessage}`,
-        action_url: window.location.href
-      });
     }
 
     // Boot App
