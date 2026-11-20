@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>Virolutpay Console</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <style>
+    :root {
+      --bg-primary: #070d1b;
+      --bg-secondary: #0f172a;
+      --bg-card: #131d35;
+      --bg-input: #0a1122;
+      --border: rgba(148, 163, 184, 0.16);
+      --border-focus: #3b82f6;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --accent: #3b82f6;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg-primary);
+      color: var(--text-main);
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      min-height: 100vh;
+      padding-bottom: 60px;
+    }
+
+    .shell {
+      max-width: 680px;
+      margin: 0 auto;
+      padding: 16px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 12px 14px;
+      margin-bottom: 16px;
+    }
+
+    .brand {
+      font-weight: 800;
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 14px;
+    }
+
+    .card-title {
+      font-size: 15px;
+      font-weight: 800;
+      margin-bottom: 4px;
+    }
+
+    .card-sub {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 14px;
+    }
+
+    .form-group { margin-bottom: 12px; }
+
+    .form-label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: #cbd5e1;
+      margin-bottom: 5px;
+    }
+
+    .form-control {
+      width: 100%;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      color: var(--text-main);
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 13px;
+      font-family: inherit;
+      outline: none;
+    }
+
+    .form-control:focus { border-color: var(--border-focus); }
+
+    textarea.form-control { min-height: 78px; resize: vertical; }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    @media (max-width: 540px) {
+      .grid-2 { grid-template-columns: 1fr; }
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #3b82f6, #2563eb);
+      color: #fff;
+      border: none;
+      border-radius: 11px;
+      padding: 11px 14px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+    }
+
+    .btn-sm {
+      background: rgba(59, 130, 246, 0.16);
+      color: #93c5fd;
+      border: 1px solid rgba(59, 130, 246, 0.35);
+      border-radius: 8px;
+      padding: 7px 10px;
+      font-size: 11.5px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .btn-danger {
+      background: rgba(239, 68, 68, 0.15);
+      color: #fca5a5;
+      border: 1px solid rgba(239, 68, 68, 0.35);
+      border-radius: 9px;
+      padding: 8px 12px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .user-row {
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 10px;
+    }
+
+    .mono { font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: #93c5fd; }
+
+    #toast {
+      position: fixed;
+      top: 14px;
+      right: 14px;
+      z-index: 9999;
+      background: #1e293b;
+      border: 1px solid rgba(59, 130, 246, 0.5);
+      color: #fff;
+      padding: 11px 14px;
+      border-radius: 11px;
+      font-size: 12.5px;
+      display: none;
+      max-width: 340px;
+      box-shadow: 0 12px 24px rgba(0, 0, 0, 0.5);
+    }
+  </style>
+</head>
+<body>
+  <div id="toast"></div>
+
+  <div class="shell">
+    <div class="topbar">
+      <div class="brand">
+        <i class="fa-solid fa-shield-halved" style="color:#60a5fa;"></i>
+        <span>Virolutpay Operations</span>
+      </div>
+      <button class="btn-danger" id="adminLogoutBtn" style="display:none;" onclick="adminLogout()">
+        <i class="fa-solid fa-right-from-bracket"></i> Sign Out
+      </button>
+    </div>
+
+    <!-- ADMIN LOGIN -->
+    <div class="card" id="adminLoginCard">
+      <div class="card-title">Operator Sign In</div>
+      <div class="card-sub">Sign in with your authorized Firebase admin account.</div>
+      <form onsubmit="handleAdminLogin(event)">
+        <div class="form-group">
+          <label class="form-label">Admin Email</label>
+          <input type="email" id="adminEmail" class="form-control" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <input type="password" id="adminPassword" class="form-control" required />
+        </div>
+        <button type="submit" class="btn-primary" style="width:100%;">Sign In to Console</button>
+      </form>
+    </div>
+
+    <!-- ADMIN PANEL -->
+    <div id="adminPanel" style="display:none;">
+      <div class="card">
+        <div class="card-title">Payout &amp; Withdrawal Configuration</div>
+        <div class="card-sub">Stored in Firestore (`settings/payoutConfig`) and loaded by signed-in users.</div>
+        <form onsubmit="savePayoutConfig(event)">
+          <div class="grid-2">
+            <div class="form-group">
+              <label class="form-label">Active Withdrawal Step</label>
+              <input type="number" id="cfgStep" class="form-control" min="1" max="10" value="1" required />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Withdrawal Fee (USD)</label>
+              <input type="number" id="cfgFeeUsd" class="form-control" step="0.01" min="0" value="0" required />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Receiving Wallet / Address</label>
+            <input type="text" id="cfgBtcAddress" class="form-control" placeholder="Enter wallet address" />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Step Instructions</label>
+            <textarea id="cfgInstructions" class="form-control" placeholder="Instructions shown to signed-in users during withdrawal..."></textarea>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Supported Platforms (one per line: Name | URL)</label>
+            <textarea id="cfgPlatforms" class="form-control" placeholder="Example Platform | https://example.com"></textarea>
+          </div>
+
+          <button type="submit" class="btn-primary">
+            <i class="fa-solid fa-floppy-disk"></i> Save Configuration
+          </button>
+        </form>
+      </div>
+
+      <div class="card">
+        <div class="card-title">User Accounts &amp; Balances</div>
+        <div class="card-sub">Adjust user USD balance, set withdrawal stage, or send support replies.</div>
+        <div id="usersList">Loading users...</div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+    import {
+      getAuth,
+      signInWithEmailAndPassword,
+      signOut,
+      onAuthStateChanged
+    } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+    import {
+      getFirestore,
+      doc,
+      getDoc,
+      setDoc,
+      updateDoc,
+      collection,
+      onSnapshot,
+      serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+
+    const ADMIN_UID = "UOsegtomN6P0oQha220N4KeIxbq2";
+
+    const FIREBASE_CONFIG = {
+      apiKey: "AIzaSyCKmSHJjGdM8Z2Upvn9qRs2wrCcMhdUQDM",
+      authDomain: "virolutpay.firebaseapp.com",
+      projectId: "virolutpay",
+      storageBucket: "virolutpay.firebasestorage.app",
+      messagingSenderId: "953105119053",
+      appId: "1:953105119053:web:0c64f58cd968bb4beba904",
+      measurementId: "G-1GM91NDXKN"
+    };
+
+    const app = initializeApp(FIREBASE_CONFIG);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    let unsubUsers = null;
+
+    function notify(msg) {
+      const el = document.getElementById("toast");
+      el.textContent = msg;
+      el.style.display = "block";
+      clearTimeout(window._toastTimer);
+      window._toastTimer = setTimeout(() => { el.style.display = "none"; }, 3500);
+    }
+
+    window.handleAdminLogin = async function(e) {
+      e.preventDefault();
+      const email = document.getElementById("adminEmail").value.trim();
+      const pass = document.getElementById("adminPassword").value;
+      try {
+        const cred = await signInWithEmailAndPassword(auth, email, pass);
+        if (cred.user.uid !== ADMIN_UID) {
+          await signOut(auth);
+          notify("This account is not authorized as admin.");
+          return;
+        }
+        notify("Signed in.");
+      } catch (err) {
+        notify(err.message || "Sign-in failed.");
+      }
+    };
+
+    window.adminLogout = async function() {
+      if (unsubUsers) { unsubUsers(); unsubUsers = null; }
+      await signOut(auth);
+      notify("Signed out.");
+    };
+
+    async function loadPayoutConfig() {
+      const ref = doc(db, "settings", "payoutConfig");
+      const snap = await getDoc(ref);
+      if (snap.exists()) {
+        const d = snap.data();
+        document.getElementById("cfgStep").value = d.activeStep || 1;
+        document.getElementById("cfgFeeUsd").value = d.feeUsd ?? 0;
+        document.getElementById("cfgBtcAddress").value = d.btcAddress || "";
+        document.getElementById("cfgInstructions").value = d.instructions || "";
+        document.getElementById("cfgPlatforms").value = Array.isArray(d.platforms)
+          ? d.platforms.map(p => `${p.name} | ${p.url}`).join("\n")
+          : "";
+      }
+    }
+
+    window.savePayoutConfig = async function(e) {
+      e.preventDefault();
+      const platforms = document.getElementById("cfgPlatforms").value
+        .split("\n")
+        .map(line => line.trim())
+        .filter(Boolean)
+        .map(line => {
+          const [name, url] = line.split("|").map(s => (s || "").trim());
+          return { name: name || "Platform", url: url || "" };
+        });
+
+      await setDoc(doc(db, "settings", "payoutConfig"), {
+        activeStep: parseInt(document.getElementById("cfgStep").value, 10) || 1,
+        feeUsd: parseFloat(document.getElementById("cfgFeeUsd").value) || 0,
+        btcAddress: document.getElementById("cfgBtcAddress").value.trim(),
+        instructions: document.getElementById("cfgInstructions").value.trim(),
+        platforms,
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+
+      notify("Configuration saved to Firestore.");
+    };
+
+    function listenUsers() {
+      if (unsubUsers) unsubUsers();
+      unsubUsers = onSnapshot(collection(db, "users"), (snap) => {
+        const list = document.getElementById("usersList");
+        if (snap.empty) {
+          list.innerHTML = `<div style="font-size:12.5px; color:var(--text-muted);">No users found yet.</div>`;
+          return;
+        }
+        list.innerHTML = snap.docs.map(d => {
+          const u = d.data();
+          const uid = d.id;
+          return `
+            <div class="user-row">
+              <div style="display:flex; justify-content:space-between; gap:8px; flex-wrap:wrap;">
+                <div>
+                  <strong>${u.name || "User"}</strong> <span class="mono">(${u.walletId || uid.slice(0, 8)})</span>
+                  <div style="font-size:12px; color:var(--text-muted);">${u.email || ""}</div>
+                </div>
+                <div style="font-weight:800; color:#34d399;">$${Number(u.balanceUsd || 0).toFixed(2)} USD</div>
+              </div>
+              <div class="grid-2" style="margin-top:10px;">
+                <input type="number" step="0.01" id="bal_${uid}" class="form-control" value="${Number(u.balanceUsd || 0).toFixed(2)}" placeholder="Balance USD" />
+                <input type="number" min="1" max="10" id="step_${uid}" class="form-control" value="${u.withdrawalStep || 1}" placeholder="Step" />
+              </div>
+              <div style="display:flex; gap:8px; margin-top:8px; flex-wrap:wrap;">
+                <button class="btn-sm" onclick="updateUserRecord('${uid}')">Save Balance &amp; Step</button>
+                <input type="text" id="reply_${uid}" class="form-control" style="flex:1; min-width:160px;" placeholder="Reply in support chat..." />
+                <button class="btn-sm" onclick="sendSupportReply('${uid}')">Send Reply</button>
+              </div>
+            </div>
+          `;
+        }).join("");
+      });
+    }
+
+    window.updateUserRecord = async function(uid) {
+      const bal = parseFloat(document.getElementById(`bal_${uid}`).value);
+      const step = parseInt(document.getElementById(`step_${uid}`).value, 10) || 1;
+      if (isNaN(bal) || bal < 0) {
+        notify("Enter a valid non-negative balance.");
+        return;
+      }
+      await updateDoc(doc(db, "users", uid), {
+        balanceUsd: Number(bal.toFixed(2)),
+        withdrawalStep: step
+      });
+      notify("User updated.");
+    };
+
+    window.sendSupportReply = async function(uid) {
+      const input = document.getElementById(`reply_${uid}`);
+      const text = input.value.trim();
+      if (!text) return;
+
+      const userRef = doc(db, "users", uid);
+      const snap = await getDoc(userRef);
+      const existing = snap.exists() && Array.isArray(snap.data().supportMessages) ? snap.data().supportMessages : [];
+      existing.push({
+        sender: "support",
+        text,
+        time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        readByUser: false
+      });
+
+      await updateDoc(userRef, { supportMessages: existing });
+      input.value = "";
+      notify("Support reply sent.");
+    };
+
+    onAuthStateChanged(auth, async (user) => {
+      if (user && user.uid === ADMIN_UID) {
+        document.getElementById("adminLoginCard").style.display = "none";
+        document.getElementById("adminPanel").style.display = "block";
+        document.getElementById("adminLogoutBtn").style.display = "inline-flex";
+        await loadPayoutConfig();
+        listenUsers();
+      } else {
+        if (user) await signOut(auth);
+        document.getElementById("adminLoginCard").style.display = "block";
+        document.getElementById("adminPanel").style.display = "none";
+        document.getElementById("adminLogoutBtn").style.display = "none";
+      }
+    });
+  </script>
+</body>
+</html>
