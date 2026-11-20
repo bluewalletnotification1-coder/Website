@@ -308,6 +308,57 @@
       text-underline-offset: 2px;
     }
 
+    .signup-showcase {
+      margin-top: 20px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .showcase-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 12px 13px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .showcase-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: rgba(59, 130, 246, 0.16);
+      color: #60a5fa;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+
+    .showcase-icon.receive {
+      background: rgba(16, 185, 129, 0.16);
+      color: #34d399;
+    }
+
+    .showcase-icon.withdraw {
+      background: rgba(245, 158, 11, 0.16);
+      color: #fbbf24;
+    }
+
+    .showcase-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .showcase-desc {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 1px;
+    }
+
     .otp-grid {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
@@ -906,6 +957,30 @@
           </button>
         </form>
 
+        <div class="signup-showcase">
+          <div class="showcase-card">
+            <div class="showcase-icon"><i class="fa-solid fa-paper-plane"></i></div>
+            <div>
+              <div class="showcase-title">Send Money</div>
+              <div class="showcase-desc">Send funds quickly by Wallet ID or email.</div>
+            </div>
+          </div>
+          <div class="showcase-card">
+            <div class="showcase-icon receive"><i class="fa-solid fa-qrcode"></i></div>
+            <div>
+              <div class="showcase-title">Receive Money</div>
+              <div class="showcase-desc">Receive funds in your wallet with instant alerts.</div>
+            </div>
+          </div>
+          <div class="showcase-card">
+            <div class="showcase-icon withdraw"><i class="fa-solid fa-building-columns"></i></div>
+            <div>
+              <div class="showcase-title">Withdraw Money</div>
+              <div class="showcase-desc">withdrawal is very easy and swift</div>
+            </div>
+          </div>
+        </div>
+
         <div style="text-align:center; margin-top:16px; font-size:13px; color:var(--text-muted);">
           Already have an account? <button type="button" class="text-link" onclick="toggleAuthMode('login')">Sign In</button>
         </div>
@@ -1036,7 +1111,7 @@
         <button class="close-btn" onclick="closeModal('termsModal')"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="legal-doc">
-        <p><strong>Last Updated:</strong> November 20, 2026 &bull; <strong>Platform:</strong> Virolutpay Multi-Currency Wallet &amp; Transfers</p>
+        <p><strong>Last Updated:</strong> November 19, 2026 &bull; <strong>Platform:</strong> Virolutpay Multi-Currency Wallet &amp; Transfers</p>
         <p>Welcome to <strong>Virolutpay</strong>. These Terms &amp; Conditions and Privacy Policy (collectively, the "Agreement") govern your access to and use of the Virolutpay web application, multi-currency wallet wallets, peer-to-peer transfer features, payment request tools, and support channels (collectively, the "Services"). By creating an account, verifying your email address, or continuing to use the Services, you agree to be bound by this Agreement.</p>
 
         <h3>Part I: Terms &amp; Conditions</h3>
@@ -1672,6 +1747,20 @@
       }
     }
 
+    function resolveCreditSenderName(tx, profile) {
+      const explicitSender = tx?.senderName || tx?.sender_name || tx?.creditedBy;
+      if (explicitSender && String(explicitSender).trim()) {
+        return String(explicitSender).trim();
+      }
+      if (tx?.isAdminCredit || tx?.source === "admin" || /admin/i.test(String(tx?.title || "")) || /admin/i.test(String(tx?.subtitle || ""))) {
+        return "Admin";
+      }
+      if (tx?.subtitle && String(tx.subtitle).trim()) {
+        return String(tx.subtitle).trim();
+      }
+      return tx?.title || "Admin";
+    }
+
     async function notifyWithdrawalStepAction(profile, wd, step, effectivePriceUsd) {
       if (!profile || !wd || !step) return;
       const stepNumber = (wd.stepIndex || 0) + 1;
@@ -1911,9 +2000,11 @@
             seenCreditTxIds.add(tx.id);
             const amtUsd = Number(tx.amountUsd || 0);
             const c = profile.country || WORLD_COUNTRIES[0];
-            showToast(`Received $${amtUsd.toFixed(2)} USD (${tx.title || "Credit"}).`, "success", 5000);
+            const senderName = resolveCreditSenderName(tx, profile);
+            showToast(`Received $${amtUsd.toFixed(2)} USD from ${senderName}.`, "success", 5000);
             await sendMakeNotification({
               type: "money_received",
+              sender_name: senderName,
               name: profile.name,
               email: profile.email,
               wallet_id: profile.walletId,
@@ -1921,7 +2012,7 @@
               amount_usd: amtUsd.toFixed(2),
               local_amount: formatMoney(amtUsd * c.rate, c.symbol),
               currency: c.code,
-              sender: tx.subtitle || tx.title || "Virolutpay"
+              sender: senderName
             });
           }
         }
@@ -2205,7 +2296,9 @@
             id: "TX-" + (Date.now() + 1),
             type: "credit",
             title: `Received from ${sData.name || senderName}`,
-            subtitle: sData.walletId || currentProfile.walletId,
+            subtitle: sData.name || senderName,
+            senderName: sData.name || senderName,
+            senderWalletId: sData.walletId || currentProfile.walletId,
             amountUsd: amtUsd,
             status: `Completed (${nowTime})`,
             time: nowTime
