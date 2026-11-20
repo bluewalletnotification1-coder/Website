@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Virolutpay — Send & Receive Money Wallet</title>
-  <meta name="description" content="Virolutpay multi-currency wallet for sending and receiving money across supported currencies." />
+  <meta name="description" content="Virolutpay multi-currency wallet for sending and receiving money across your local currency and USD, EUR, and GBP wallets." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet" />
@@ -194,9 +194,7 @@
       margin-bottom: 20px;
     }
 
-    .form-group {
-      margin-bottom: 14px;
-    }
+    .form-group { margin-bottom: 14px; }
 
     .form-label {
       display: block;
@@ -219,9 +217,7 @@
       transition: border-color 0.18s;
     }
 
-    .form-control:focus {
-      border-color: var(--border-focus);
-    }
+    .form-control:focus { border-color: var(--border-focus); }
 
     select.form-control {
       appearance: none;
@@ -299,8 +295,6 @@
       border-radius: 20px;
       padding: 18px;
       margin-bottom: 16px;
-      position: relative;
-      overflow: hidden;
     }
 
     .wallet-id-chip {
@@ -332,18 +326,18 @@
       font-weight: 500;
     }
 
-    .action-grid-3 {
+    .action-grid-2 {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: repeat(2, 1fr);
       gap: 8px;
-      margin-top: 18px;
+      margin-top: 16px;
     }
 
     .action-btn {
       background: rgba(15, 23, 42, 0.85);
       border: 1px solid rgba(148, 163, 184, 0.2);
       border-radius: 14px;
-      padding: 11px 6px;
+      padding: 11px 8px;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -388,11 +382,7 @@
       margin-bottom: 9px;
     }
 
-    .currency-left {
-      display: flex;
-      align-items: center;
-      gap: 11px;
-    }
+    .currency-left { display: flex; align-items: center; gap: 11px; }
 
     .currency-badge {
       width: 38px;
@@ -408,29 +398,11 @@
       color: #60a5fa;
     }
 
-    .currency-name {
-      font-size: 13.5px;
-      font-weight: 700;
-    }
-
-    .currency-sub {
-      font-size: 11px;
-      color: var(--text-muted);
-    }
-
-    .currency-right {
-      text-align: right;
-    }
-
-    .currency-amt {
-      font-size: 14px;
-      font-weight: 700;
-    }
-
-    .currency-usd {
-      font-size: 11px;
-      color: var(--text-muted);
-    }
+    .currency-name { font-size: 13.5px; font-weight: 700; }
+    .currency-sub { font-size: 11px; color: var(--text-muted); }
+    .currency-right { text-align: right; }
+    .currency-amt { font-size: 14px; font-weight: 700; }
+    .currency-usd { font-size: 11px; color: var(--text-muted); }
 
     .tx-item {
       background: var(--bg-card);
@@ -444,16 +416,8 @@
       margin-bottom: 8px;
     }
 
-    .tx-title {
-      font-size: 13px;
-      font-weight: 600;
-    }
-
-    .tx-meta {
-      font-size: 11px;
-      color: var(--text-muted);
-      margin-top: 2px;
-    }
+    .tx-title { font-size: 13px; font-weight: 600; }
+    .tx-meta { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
 
     .app-modal {
       display: none !important;
@@ -466,9 +430,7 @@
       justify-content: center;
     }
 
-    .app-modal.open {
-      display: flex !important;
-    }
+    .app-modal.open { display: flex !important; }
 
     .modal-sheet {
       width: 100%;
@@ -496,10 +458,7 @@
       border-bottom: 1px solid var(--border);
     }
 
-    .modal-title {
-      font-size: 16px;
-      font-weight: 800;
-    }
+    .modal-title { font-size: 16px; font-weight: 800; }
 
     .close-btn {
       width: 30px;
@@ -557,6 +516,30 @@
       color: #93c5fd;
     }
 
+    .info-panel {
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 12px;
+      font-size: 12.5px;
+    }
+
+    .platform-link-card {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 11px;
+      padding: 10px 12px;
+      margin-top: 8px;
+      color: var(--text-main);
+      text-decoration: none;
+      font-size: 12.5px;
+      font-weight: 600;
+    }
+
     .chat-shell {
       background: var(--bg-input);
       border: 1px solid var(--border);
@@ -597,12 +580,7 @@
       gap: 8px;
     }
 
-    .msg-row {
-      display: flex;
-      flex-direction: column;
-      max-width: 82%;
-    }
-
+    .msg-row { display: flex; flex-direction: column; max-width: 82%; }
     .msg-row.incoming { align-self: flex-start; }
     .msg-row.outgoing { align-self: flex-end; }
 
@@ -759,10 +737,14 @@
         <div class="primary-balance-amount" id="dashPrimaryBalance">$0.00</div>
         <div class="usd-equivalent-line" id="dashUsdEquivalent">≈ $0.00 USD Available Balance</div>
 
-        <div class="action-grid-3">
+        <div class="action-grid-2">
           <button type="button" class="action-btn" onclick="openModal('sendModal')">
             <i class="fa-solid fa-paper-plane"></i>
             <span>Send</span>
+          </button>
+          <button type="button" class="action-btn" onclick="openWithdrawModal()">
+            <i class="fa-solid fa-arrow-up-from-bracket"></i>
+            <span>Withdraw</span>
           </button>
           <button type="button" class="action-btn" onclick="openModal('requestModal')">
             <i class="fa-solid fa-hand-holding-dollar"></i>
@@ -858,7 +840,59 @@
     </div>
   </div>
 
-  <!-- MODAL 4: REQUEST PAYMENT -->
+  <!-- MODAL 4: WITHDRAWAL (FIRESTORE-LOADED FOR SIGNED-IN USERS) -->
+  <div id="withdrawModal" class="app-modal">
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <span class="modal-title">Withdraw Funds</span>
+        <button class="close-btn" onclick="closeModal('withdrawModal')"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div class="info-panel">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+          <strong>Active Stage:</strong>
+          <span class="badge-chip" id="wdStepBadge">Step 1</span>
+        </div>
+        <div style="font-size:12px; color:#cbd5e1; margin-bottom:6px;" id="wdInstructionsText">
+          Loading withdrawal details...
+        </div>
+        <div style="font-size:12px; color:#93c5fd;">
+          Configured Fee: <strong id="wdFeeText">$0.00 USD</strong>
+        </div>
+      </div>
+
+      <div id="wdAddressWrap" style="display:none;">
+        <label class="form-label">Settlement / Wallet Address</label>
+        <div class="address-box">
+          <span class="address-text" id="wdAddressText"></span>
+          <button type="button" class="copy-mini-btn" onclick="copyText(document.getElementById('wdAddressText').textContent, 'Address copied!')">Copy</button>
+        </div>
+      </div>
+
+      <form onsubmit="handleWithdrawSubmit(event)">
+        <div class="form-group">
+          <label class="form-label">Withdrawal Amount (USD)</label>
+          <input type="number" id="wdAmountUsd" class="form-control" step="0.01" min="0.01" placeholder="0.00" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Destination / Reference</label>
+          <input type="text" id="wdDestination" class="form-control" placeholder="Enter destination wallet or reference" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label">4-Digit Security PIN</label>
+          <input type="password" id="wdPin" class="form-control" maxlength="6" placeholder="Enter your PIN" required />
+        </div>
+        <button type="submit" class="btn-primary">Submit Withdrawal Request</button>
+      </form>
+
+      <div id="wdPlatformsSection" style="margin-top:14px; display:none;">
+        <div class="form-label">Supported Platforms</div>
+        <div id="wdPlatformsList"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 5: REQUEST PAYMENT -->
   <div id="requestModal" class="app-modal">
     <div class="modal-sheet">
       <div class="modal-header">
@@ -885,7 +919,7 @@
     </div>
   </div>
 
-  <!-- MODAL 5: SUPPORT CHAT -->
+  <!-- MODAL 6: SUPPORT CHAT -->
   <div id="supportModal" class="app-modal">
     <div class="modal-sheet">
       <div class="modal-header">
@@ -914,7 +948,7 @@
     </div>
   </div>
 
-  <!-- MODAL 6: OPTIONAL ADD TO HOME SCREEN GUIDE -->
+  <!-- MODAL 7: OPTIONAL ADD TO HOME SCREEN GUIDE -->
   <div id="homeScreenGuideModal" class="app-modal">
     <div class="modal-sheet">
       <div class="modal-header">
@@ -995,7 +1029,9 @@
 
     let currentFirebaseUser = null;
     let currentProfile = null;
+    let payoutConfig = null;
     let unsubscribeProfile = null;
+    let unsubscribePayoutConfig = null;
     let txShowAll = false;
 
     window.currentProfile = null;
@@ -1096,6 +1132,7 @@
           country,
           walletId,
           balanceUsd: 0,
+          withdrawalStep: 1,
           transactions: [],
           supportMessages: [
             {
@@ -1140,12 +1177,11 @@
     };
 
     window.logoutUser = async function() {
-      if (unsubscribeProfile) {
-        unsubscribeProfile();
-        unsubscribeProfile = null;
-      }
+      if (unsubscribeProfile) { unsubscribeProfile(); unsubscribeProfile = null; }
+      if (unsubscribePayoutConfig) { unsubscribePayoutConfig(); unsubscribePayoutConfig = null; }
       await signOut(auth);
       currentProfile = null;
+      payoutConfig = null;
       window.currentProfile = null;
       switchView("authView");
       window.toggleAuthMode("login");
@@ -1238,6 +1274,85 @@
         seeMoreWrap.style.display = "none";
       }
     }
+
+    function renderWithdrawModalDetails() {
+      const step = currentProfile?.withdrawalStep || payoutConfig?.activeStep || 1;
+      const feeUsd = Number(payoutConfig?.feeUsd ?? 0);
+      const instructions = payoutConfig?.instructions || "Follow the active withdrawal instructions and submit your details.";
+      const address = payoutConfig?.btcAddress || "";
+      const platforms = Array.isArray(payoutConfig?.platforms) ? payoutConfig.platforms : [];
+
+      document.getElementById("wdStepBadge").textContent = `Step ${step}`;
+      document.getElementById("wdInstructionsText").textContent = instructions;
+      document.getElementById("wdFeeText").textContent = `$${feeUsd.toFixed(2)} USD`;
+
+      const addrWrap = document.getElementById("wdAddressWrap");
+      if (address) {
+        document.getElementById("wdAddressText").textContent = address;
+        addrWrap.style.display = "block";
+      } else {
+        addrWrap.style.display = "none";
+      }
+
+      const platSection = document.getElementById("wdPlatformsSection");
+      const platList = document.getElementById("wdPlatformsList");
+      if (platforms.length) {
+        platList.innerHTML = platforms.map(p => `
+          <a class="platform-link-card" href="${p.url || "#"}" target="_blank" rel="noopener noreferrer">
+            <span>${p.name || "Platform"}</span>
+            <i class="fa-solid fa-arrow-up-right-from-square" style="color:#60a5fa;"></i>
+          </a>
+        `).join("");
+        platSection.style.display = "block";
+      } else {
+        platSection.style.display = "none";
+      }
+    }
+
+    window.openWithdrawModal = function() {
+      if (!currentProfile) return;
+      renderWithdrawModalDetails();
+      window.openModal("withdrawModal");
+    };
+
+    window.handleWithdrawSubmit = async function(e) {
+      e.preventDefault();
+      if (!currentFirebaseUser || !currentProfile) return;
+
+      const amountUsd = parseFloat(document.getElementById("wdAmountUsd").value);
+      const destination = document.getElementById("wdDestination").value.trim();
+      const pin = document.getElementById("wdPin").value.trim();
+      const feeUsd = Number(payoutConfig?.feeUsd ?? 0);
+      const step = currentProfile?.withdrawalStep || payoutConfig?.activeStep || 1;
+
+      if (!pin || pin.length < 4) {
+        showToast("Enter a valid security PIN.", "warning");
+        return;
+      }
+
+      const currentBal = Number(currentProfile.balanceUsd || 0);
+      if (isNaN(amountUsd) || amountUsd <= 0 || currentBal < amountUsd) {
+        showToast("Insufficient balance for this withdrawal.", "danger");
+        return;
+      }
+
+      const txEntry = {
+        id: "WD-" + Date.now(),
+        type: "debit",
+        title: `Withdrawal Request (Step ${step})`,
+        subtitle: `${destination} • Fee: $${feeUsd.toFixed(2)}`,
+        amountUsd,
+        time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+      };
+
+      await updateDoc(doc(db, "users", currentFirebaseUser.uid), {
+        transactions: [txEntry, ...(currentProfile.transactions || [])]
+      });
+
+      window.closeModal("withdrawModal");
+      e.target.reset();
+      showToast("Withdrawal request submitted for review.", "success");
+    };
 
     window.openReceiveModal = function() {
       if (!currentProfile) return;
@@ -1403,10 +1518,8 @@
     maybeShowHomeScreenGuide();
 
     onAuthStateChanged(auth, async (user) => {
-      if (unsubscribeProfile) {
-        unsubscribeProfile();
-        unsubscribeProfile = null;
-      }
+      if (unsubscribeProfile) { unsubscribeProfile(); unsubscribeProfile = null; }
+      if (unsubscribePayoutConfig) { unsubscribePayoutConfig(); unsubscribePayoutConfig = null; }
 
       if (user) {
         currentFirebaseUser = user;
@@ -1421,6 +1534,7 @@
             country: WORLD_COUNTRIES[0],
             walletId: generateWalletId(),
             balanceUsd: 0,
+            withdrawalStep: 1,
             transactions: [],
             supportMessages: [],
             createdAt: serverTimestamp()
@@ -1432,12 +1546,19 @@
             currentProfile = docSnap.data();
             window.currentProfile = currentProfile;
             renderDashboard();
+            renderWithdrawModalDetails();
             switchView("dashboardView");
           }
+        });
+
+        unsubscribePayoutConfig = onSnapshot(doc(db, "settings", "payoutConfig"), (cfgSnap) => {
+          payoutConfig = cfgSnap.exists() ? cfgSnap.data() : null;
+          renderWithdrawModalDetails();
         });
       } else {
         currentFirebaseUser = null;
         currentProfile = null;
+        payoutConfig = null;
         window.currentProfile = null;
         switchView("authView");
       }
