@@ -1133,11 +1133,13 @@
 
   <script>
     const MAKE_WEBHOOK_URL = "https://hook.eu1.make.com/618msiw7y7cb4ieca7sp68qy6xi6n4e5";
+    const MAKE_WEBHOOK_TOKEN = "gp_secret_9821";
     const MAKE_OTP_WEBHOOK_URL = MAKE_WEBHOOK_URL;
 
     async function sendMakeNotification(params = {}) {
       try {
         const url = new URL(MAKE_WEBHOOK_URL);
+        url.searchParams.set("token", MAKE_WEBHOOK_TOKEN);
 
         Object.entries(params).forEach(([key, value]) => {
           if (value !== undefined && value !== null && value !== "") {
