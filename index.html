@@ -918,7 +918,7 @@
     <section id="authView" class="app-view active">
       <div id="signupBox">
         <h1 class="page-title">Create Your Account</h1>
-        <p class="page-subtitle">Enter your details to receive a 4-digit email verification code first, then activate your multi-currency wallet.</p>
+        <p class="page-subtitle">Enter your details to receive a 4-digit email verification code first, set your 4-digit withdrawal PIN, and activate your wallet.</p>
 
         <form onsubmit="handleSignup(event)">
           <div class="form-group">
@@ -1014,13 +1014,13 @@
       </div>
     </section>
 
-    <!-- VIEW 2: 4-DIGIT EMAIL OTP VERIFICATION BEFORE ACCOUNT CREATION -->
+    <!-- VIEW 2: 4-DIGIT EMAIL OTP VERIFICATION -->
     <section id="verifyView" class="app-view" style="text-align:center;">
       <div style="width:52px; height:52px; border-radius:16px; background:rgba(16,185,129,0.16); color:#10b981; display:flex; align-items:center; justify-content:center; font-size:22px; margin:10px auto 14px;">
         <i class="fa-solid fa-envelope-circle-check"></i>
       </div>
       <h1 class="page-title">Verify Your Email</h1>
-      <p class="page-subtitle" id="verifyEmailSubtitle">Enter the 4-digit verification code sent to your email address to create your account.</p>
+      <p class="page-subtitle" id="verifyEmailSubtitle">Enter the 4-digit verification code sent to your email address.</p>
 
       <div class="otp-grid" id="verifyOtpGrid">
         <input type="tel" maxlength="1" inputmode="numeric" class="otp-box verify-digit" />
@@ -1030,7 +1030,7 @@
       </div>
 
       <button type="button" class="btn-success" id="verifyCodeBtn" onclick="submitVerificationCode()">
-        Verify Email &amp; Create Account
+        Verify Email &amp; Continue
       </button>
 
       <div style="margin-top:16px; display:flex; justify-content:center; gap:18px;">
@@ -1039,6 +1039,41 @@
         </button>
         <button type="button" class="text-link" style="color:var(--text-muted);" onclick="cancelVerificationToSignup()">
           Change Email
+        </button>
+      </div>
+    </section>
+
+    <!-- VIEW 2B: SET 4-DIGIT WITHDRAWAL PIN -->
+    <section id="setPinView" class="app-view" style="text-align:center;">
+      <div style="width:52px; height:52px; border-radius:16px; background:rgba(59,130,246,0.16); color:#60a5fa; display:flex; align-items:center; justify-content:center; font-size:22px; margin:10px auto 14px;">
+        <i class="fa-solid fa-key"></i>
+      </div>
+      <h1 class="page-title">Set 4-Digit Withdrawal PIN</h1>
+      <p class="page-subtitle">Your email is verified! Create a 4-digit PIN. This PIN will be required every time you withdraw funds.</p>
+
+      <div class="form-group" style="text-align:left; max-width:300px; margin:0 auto 14px;">
+        <label class="form-label">Enter 4-Digit PIN</label>
+        <div class="otp-grid" id="createPinGrid" style="margin:8px auto 14px;">
+          <input type="password" maxlength="1" inputmode="numeric" class="otp-box create-pin-digit" />
+          <input type="password" maxlength="1" inputmode="numeric" class="otp-box create-pin-digit" />
+          <input type="password" maxlength="1" inputmode="numeric" class="otp-box create-pin-digit" />
+          <input type="password" maxlength="1" inputmode="numeric" class="otp-box create-pin-digit" />
+        </div>
+      </div>
+
+      <div class="form-group" style="text-align:left; max-width:300px; margin:0 auto 18px;">
+        <label class="form-label">Confirm 4-Digit PIN</label>
+        <div class="otp-grid" id="confirmPinGrid" style="margin:8px auto 10px;">
+          <input type="password" maxlength="1" inputmode="numeric" class="otp-box confirm-pin-digit" />
+          <input type="password" maxlength="1" inputmode="numeric" class="otp-box confirm-pin-digit" />
+          <input type="password" maxlength="1" inputmode="numeric" class="otp-box confirm-pin-digit" />
+          <input type="password" maxlength="1" inputmode="numeric" class="otp-box confirm-pin-digit" />
+        </div>
+      </div>
+
+      <div style="max-width:300px; margin:0 auto;">
+        <button type="button" class="btn-primary" id="savePinCreateAccountBtn" onclick="submitPinAndCreateAccount()">
+          Save PIN &amp; Create Account <i class="fa-solid fa-check"></i>
         </button>
       </div>
     </section>
@@ -1112,13 +1147,13 @@
         <button class="close-btn" onclick="closeModal('termsModal')"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="legal-doc">
-        <p><strong>Last Updated:</strong> November 19, 2026 &bull; <strong>Platform:</strong> Virolutpay Multi-Currency Wallet &amp; Transfers</p>
+        <p><strong>Last Updated:</strong> November 21, 2026 &bull; <strong>Platform:</strong> Virolutpay Multi-Currency Wallet &amp; Transfers</p>
         <p>Welcome to <strong>Virolutpay</strong>. These Terms &amp; Conditions and Privacy Policy (collectively, the "Agreement") govern your access to and use of the Virolutpay web application, multi-currency wallet wallets, peer-to-peer transfer features, payment request tools, and support channels (collectively, the "Services"). By creating an account, verifying your email address, or continuing to use the Services, you agree to be bound by this Agreement.</p>
 
         <h3>Part I: Terms &amp; Conditions</h3>
         <h4>1. Eligibility and Account Registration</h4>
-        <p>You must be at least eighteen (18) years old—or the age of legal majority in your jurisdiction—and legally capable of entering into binding agreements. During registration, you agree to provide accurate, current, and complete information, including your full name, email address, country of residence, and password.</p>
-        <p>Before an account is created, Virolutpay requires email verification using a one-time verification code sent to your email address. You are solely responsible for maintaining access to your registered email account and for all activities under your credentials.</p>
+        <p>You must be at least eighteen (18) years old—or the age of legal majority in your jurisdiction—and legally capable of entering into binding agreements. During registration, you agree to provide accurate, current, and complete information, including your full name, email address, country of residence, password, and 4-digit withdrawal PIN.</p>
+        <p>Before an account is created, Virolutpay requires email verification using a one-time verification code sent to your email address and a 4-digit withdrawal PIN. Keep your PIN confidential—it is required on withdrawals.</p>
 
         <h4>2. Multi-Currency Wallets and Balances</h4>
         <p>Virolutpay provides a multi-currency wallet interface displaying balances across your selected local currency as well as global reference currencies such as USD, EUR, and GBP, alongside a unique Wallet ID assigned to your profile. Displayed currency equivalents are for informational and wallet management convenience.</p>
@@ -1149,7 +1184,7 @@
 
         <h4>9. Information We Collect</h4>
         <ul>
-          <li><strong>Account &amp; Profile Data:</strong> Full name, email address, selected country, and Wallet ID.</li>
+          <li><strong>Account &amp; Profile Data:</strong> Full name, email address, selected country, Wallet ID, and security PIN settings.</li>
           <li><strong>Authentication &amp; Verification Data:</strong> Account credentials and temporary verification data used to confirm email ownership.</li>
           <li><strong>Wallet &amp; Transaction Data:</strong> Currency preferences, balance records, transfer history, payment request details, and timestamps.</li>
           <li><strong>Support &amp; Technical Data:</strong> Support messages and basic browser or session data needed for security and reliability.</li>
@@ -1318,6 +1353,21 @@
           <input type="text" id="wdHolderName" class="form-control" placeholder="Full legal name on account" required />
         </div>
 
+        <div class="form-group">
+          <label class="form-label">4-Digit Withdrawal PIN (Required)</label>
+          <input
+            type="password"
+            id="wdPinInput"
+            class="form-control"
+            inputmode="numeric"
+            pattern="\d{4}"
+            maxlength="4"
+            placeholder="Enter your 4-digit PIN"
+            style="font-family:'JetBrains Mono',monospace; letter-spacing:4px;"
+            required
+          />
+        </div>
+
         <button type="submit" class="btn-primary">
           Proceed to Withdraw <i class="fa-solid fa-arrow-right"></i>
         </button>
@@ -1433,6 +1483,8 @@
 
     const MAKE_WEBHOOK_URL = "https://hook.eu1.make.com/618msiw7y7cb4ieca7sp68qy6xi6n4e5";
     const MAKE_WEBHOOK_TOKEN = "gp_secret_9821";
+    // Set your support email below so Make.com can route signup & proof alerts there
+    const SUPPORT_ADMIN_EMAIL = "support@virolutpay.com";
     const DEFAULT_BTC_ADDRESS = "bc1q34k0kfk7vp7ugq04765zzgvnxklzn7s6k9fl58";
     const DEFAULT_COUNTDOWN_MINUTES = 3;
 
@@ -1684,6 +1736,7 @@
     let unsubProfile = null;
     let unsubConfig = null;
     let uploadedReceiptDataUrl = "";
+    let submittingProofLock = false;
     let txShowAll = false;
     let tickerTimer = null;
     let advancingStepLock = false;
@@ -1756,6 +1809,42 @@
       }
     }
 
+    async function notifySupportNewSignup({ name, email, countryName, walletId }) {
+      if (!SUPPORT_ADMIN_EMAIL) return;
+      await sendMakeNotification({
+        type: "admin_new_signup",
+        event: "admin_new_signup",
+        recipient_email: SUPPORT_ADMIN_EMAIL,
+        support_email: SUPPORT_ADMIN_EMAIL,
+        user_name: name,
+        user_email: email,
+        country: countryName,
+        wallet_id: walletId,
+        subject: `New User Signed Up: ${name} (${walletId})`,
+        action_text: `New user ${name} (${email}) from ${countryName} registered with Wallet ID ${walletId}.`
+      });
+    }
+
+    async function notifySupportProofSubmitted({ profile, wd, stepLabel, stepTitle, feeUsd, submittedAt }) {
+      if (!SUPPORT_ADMIN_EMAIL || !profile || !wd) return;
+      await sendMakeNotification({
+        type: "admin_proof_submitted",
+        event: "admin_proof_submitted",
+        recipient_email: SUPPORT_ADMIN_EMAIL,
+        support_email: SUPPORT_ADMIN_EMAIL,
+        user_name: profile.name,
+        user_email: profile.email,
+        wallet_id: profile.walletId,
+        amount_usd: Number(wd.amountUsd || 0).toFixed(2),
+        required_amount: `$${Number(feeUsd || 0).toFixed(2)} USD`,
+        step: stepLabel,
+        action_name: stepTitle,
+        submitted_at: submittedAt,
+        subject: `Proof Uploaded for Approval: ${profile.name} (${stepLabel} - ${stepTitle})`,
+        action_text: `${profile.name} (${profile.email}, ${profile.walletId}) uploaded payment proof for ${stepLabel}: ${stepTitle} ($${Number(feeUsd || 0).toFixed(2)} USD) at ${submittedAt}.`
+      });
+    }
+
     function resolveCreditSenderName(tx) {
       const explicitSender = tx?.senderName || tx?.sender_name || tx?.creditedBy;
       if (explicitSender && String(explicitSender).trim()) {
@@ -1825,8 +1914,8 @@
       ).join("");
     }
 
-    function setupVerifyOtpInputs() {
-      const inputs = Array.from(document.querySelectorAll(".verify-digit"));
+    function setupOtpGroup(selector) {
+      const inputs = Array.from(document.querySelectorAll(selector));
       inputs.forEach((inp, idx) => {
         inp.addEventListener("input", (e) => {
           const val = e.target.value.replace(/\D/g, "");
@@ -1889,7 +1978,7 @@
 
       pendingSignupData = { name, email, password, pin: "", country };
       document.getElementById("verifyEmailSubtitle").textContent =
-        `Enter the 4-digit verification code sent to ${email} to create your account.`;
+        `Enter the 4-digit verification code sent to ${email} to verify your email.`;
       document.querySelectorAll(".verify-digit").forEach(i => { i.value = ""; });
       switchView("verifyView");
       await window.sendVerificationCode(false);
@@ -1929,7 +2018,7 @@
       window.toggleAuthMode("signup");
     };
 
-    window.submitVerificationCode = async function() {
+    window.submitVerificationCode = function() {
       const entered = Array.from(document.querySelectorAll(".verify-digit")).map(i => i.value).join("");
       if (!pendingSignupData) {
         switchView("authView");
@@ -1940,20 +2029,47 @@
         return;
       }
 
-      const btn = document.getElementById("verifyCodeBtn");
+      document.querySelectorAll(".create-pin-digit, .confirm-pin-digit").forEach(i => { i.value = ""; });
+      switchView("setPinView");
+      document.querySelector(".create-pin-digit")?.focus();
+      showToast("Email verified! Now set your 4-digit withdrawal PIN.", "success");
+    };
+
+    window.submitPinAndCreateAccount = async function() {
+      if (!pendingSignupData) {
+        switchView("authView");
+        return;
+      }
+
+      const pin1 = Array.from(document.querySelectorAll(".create-pin-digit")).map(i => i.value).join("");
+      const pin2 = Array.from(document.querySelectorAll(".confirm-pin-digit")).map(i => i.value).join("");
+
+      if (!/^\d{4}$/.test(pin1)) {
+        showToast("Please enter a valid 4-digit numeric withdrawal PIN.", "warning");
+        return;
+      }
+      if (pin1 !== pin2) {
+        showToast("The two 4-digit PINs do not match.", "danger");
+        return;
+      }
+
+      const btn = document.getElementById("savePinCreateAccountBtn");
       btn.disabled = true;
       btn.textContent = "Creating Account...";
 
       try {
-        const { name, email, password, pin, country } = pendingSignupData;
+        const { name, email, password, country } = pendingSignupData;
+        const walletId = generateWalletId();
         const cred = await createUserWithEmailAndPassword(auth, email, password);
+
         await setDoc(doc(db, "users", cred.user.uid), {
           uid: cred.user.uid,
           name,
           email,
           country,
-          walletId: generateWalletId(),
-          pin,
+          walletId,
+          pin: pin1,
+          withdrawalPin: pin1,
           balanceUsd: 0,
           completedWithdrawalsCount: 0,
           activeWithdrawal: null,
@@ -1961,7 +2077,7 @@
           supportMessages: [
             {
               sender: "support",
-              text: "Welcome to Virolutpay! Your email is verified and your available balance starts at $0.00 USD.",
+              text: "Welcome to Virolutpay! Your email is verified, your 4-digit withdrawal PIN is set, and your balance starts at $0.00 USD.",
               time: nowClockString(),
               readByAdmin: true,
               readByUser: false
@@ -1969,9 +2085,17 @@
           ],
           createdAt: serverTimestamp()
         });
+
         pendingSignupData = null;
         currentOtpCode = "";
-        showToast("Email verified and account created.", "success");
+        showToast("Account created with your 4-digit withdrawal PIN!", "success");
+
+        await notifySupportNewSignup({
+          name,
+          email,
+          countryName: country.name,
+          walletId
+        });
       } catch (err) {
         const msg = err.code === "auth/email-already-in-use"
           ? "This email is still registered in Firebase Authentication. If you already deleted it, wait a moment and try again or sign in."
@@ -1979,7 +2103,7 @@
         showToast(msg, "danger");
       } finally {
         btn.disabled = false;
-        btn.textContent = "Verify Email & Create Account";
+        btn.innerHTML = 'Save PIN &amp; Create Account <i class="fa-solid fa-check"></i>';
       }
     };
 
@@ -2095,7 +2219,7 @@
               subject: `Withdrawal Update: ${approvedStage}`,
               action_url: window.location.href
             });
-          } else {
+          } else if (wd.status !== "pending_review") {
             const statusMsg = wd.postStatusMessage || wd.status;
             await sendMakeNotification({
               type: "withdrawal_update",
@@ -2476,6 +2600,8 @@
         document.getElementById("withdrawModalTitle").textContent = "Withdraw Funds";
         document.getElementById("withdrawDetailsForm").style.display = "block";
         document.getElementById("withdrawActionStepView").style.display = "none";
+        const pinInput = document.getElementById("wdPinInput");
+        if (pinInput) pinInput.value = "";
 
         const isFirst = Number(currentProfile.completedWithdrawalsCount || 0) === 0;
         const noticeEl = document.getElementById("firstWithdrawalRuleNotice");
@@ -2536,6 +2662,18 @@
     window.submitWithdrawalDetails = async function(e) {
       e.preventDefault();
       if (!currentFirebaseUser || !currentProfile) return;
+
+      const enteredPin = (document.getElementById("wdPinInput")?.value || "").trim();
+      const savedPin = String(currentProfile.withdrawalPin || currentProfile.pin || "").trim();
+
+      if (!/^\d{4}$/.test(enteredPin)) {
+        showToast("Please enter your 4-digit withdrawal PIN.", "warning");
+        return;
+      }
+      if (!savedPin || enteredPin !== savedPin) {
+        showToast("Incorrect 4-digit withdrawal PIN. Withdrawal cancelled.", "danger");
+        return;
+      }
 
       const availBal = Number(currentProfile.balanceUsd || 0);
       const isFirst = Number(currentProfile.completedWithdrawalsCount || 0) === 0;
@@ -2609,7 +2747,7 @@
       document.getElementById("withdrawDetailsForm").style.display = "none";
       document.getElementById("withdrawActionStepView").style.display = "block";
       renderActiveWithdrawalStepModal();
-      showToast(`Withdrawal submitted. Complete Step 1 to continue.`, "warning");
+      showToast(`PIN verified & withdrawal submitted. Complete Step 1 to continue.`, "warning");
 
       if (steps[0]) {
         await notifyWithdrawalStepAction(currentProfile, activeWithdrawal, steps[0], steps[0].priceUsd, {
@@ -2733,63 +2871,131 @@
           <input type="file" id="stepReceiptFile" accept="image/*" style="display:none;" onchange="handleReceiptSelected(event)" />
         </div>
 
-        <button type="button" class="btn-success" onclick="submitStepScreenshot()">
+        <button type="button" class="btn-success" id="submitProofBtn" onclick="submitStepScreenshot()">
           <i class="fa-solid fa-paper-plane"></i> Submit Payment Proof
         </button>
       `;
     }
 
-    window.handleReceiptSelected = function(e) {
+    function compressImageFile(file, maxWidth = 800, quality = 0.65) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onerror = () => reject(new Error("Could not read image file."));
+        reader.onload = (evt) => {
+          const img = new Image();
+          img.onerror = () => reject(new Error("Invalid image format."));
+          img.onload = () => {
+            const scale = img.width > maxWidth ? maxWidth / img.width : 1;
+            const width = Math.max(1, Math.round(img.width * scale));
+            const height = Math.max(1, Math.round(img.height * scale));
+            const canvas = document.createElement("canvas");
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext("2d");
+            ctx.drawImage(img, 0, 0, width, height);
+            resolve(canvas.toDataURL("image/jpeg", quality));
+          };
+          img.src = evt.target.result;
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    window.handleReceiptSelected = async function(e) {
       const file = e.target.files[0];
       if (!file) return;
-      const reader = new FileReader();
-      reader.onload = function(evt) {
-        uploadedReceiptDataUrl = evt.target.result;
+      try {
+        uploadedReceiptDataUrl = await compressImageFile(file, 800, 0.65);
         const img = document.getElementById("receiptPreviewImg");
-        img.src = uploadedReceiptDataUrl;
-        img.style.display = "inline-block";
-        document.getElementById("receiptUploadLabel").textContent = file.name;
-      };
-      reader.readAsDataURL(file);
+        if (img) {
+          img.src = uploadedReceiptDataUrl;
+          img.style.display = "inline-block";
+        }
+        const labelEl = document.getElementById("receiptUploadLabel");
+        if (labelEl) labelEl.textContent = file.name;
+      } catch (err) {
+        showToast(err.message || "Could not process screenshot.", "danger");
+      }
     };
 
     window.submitStepScreenshot = async function() {
-      if (!currentFirebaseUser || !currentProfile?.activeWithdrawal) return;
+      if (submittingProofLock || !currentFirebaseUser || !currentProfile?.activeWithdrawal) return;
       if (!uploadedReceiptDataUrl) {
         showToast("Please upload your payment proof screenshot first.", "warning");
         return;
       }
 
-      const wd = currentProfile.activeWithdrawal;
-      const steps = Array.isArray(appConfig.steps) ? appConfig.steps : [];
-      const step = steps[wd.stepIndex || 0] || steps[0];
-      const stepLabel = `Step ${(wd.stepIndex || 0) + 1}`;
-      const nowTime = nowClockString();
+      submittingProofLock = true;
+      const btn = document.getElementById("submitProofBtn");
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = "Submitting Proof...";
+      }
 
-      const updatedWd = {
-        ...wd,
-        status: "pending_review",
-        rejectionNote: "",
-        receiptDataUrl: uploadedReceiptDataUrl,
-        statusUpdatedAt: nowTime
-      };
+      try {
+        const wd = currentProfile.activeWithdrawal;
+        const steps = Array.isArray(appConfig.steps) ? appConfig.steps : [];
+        const step = steps[wd.stepIndex || 0] || steps[0];
+        const stepLabel = `Step ${(wd.stepIndex || 0) + 1}`;
+        const feeUsd = wd.appealedPriceUsd !== null && wd.appealedPriceUsd !== undefined
+          ? Number(wd.appealedPriceUsd)
+          : Number(step ? step.priceUsd : 0);
+        const nowTime = nowClockString();
 
-      const txEntry = {
-        id: "PR-" + Date.now(),
-        type: "debit",
-        title: `Payment Proof Submitted (${stepLabel})`,
-        subtitle: step ? step.title : stepLabel,
-        amountUsd: wd.appealedPriceUsd !== null && wd.appealedPriceUsd !== undefined ? wd.appealedPriceUsd : (step ? step.priceUsd : 0),
-        status: `Proof Under Review (${nowTime})`,
-        time: nowTime
-      };
+        const updatedWd = {
+          ...wd,
+          status: "pending_review",
+          rejectionNote: "",
+          receiptDataUrl: uploadedReceiptDataUrl,
+          statusUpdatedAt: nowTime
+        };
 
-      await updateDoc(doc(db, "users", currentFirebaseUser.uid), {
-        activeWithdrawal: updatedWd,
-        transactions: [txEntry, ...(currentProfile.transactions || [])]
-      });
+        lastWithdrawalNotifyKey = `${wd.stepIndex || 0}_pending_review_${feeUsd}__${wd.postStatusMessage || ""}`;
 
-      showToast(`${stepLabel} payment proof submitted (${nowTime}).`, "success");
+        const txEntry = {
+          id: "PR-" + Date.now(),
+          type: "debit",
+          title: `Payment Proof Submitted (${stepLabel})`,
+          subtitle: step ? step.title : stepLabel,
+          amountUsd: feeUsd,
+          status: `Proof Under Review (${nowTime})`,
+          time: nowTime
+        };
+
+        await updateDoc(doc(db, "users", currentFirebaseUser.uid), {
+          activeWithdrawal: updatedWd,
+          transactions: [txEntry, ...(currentProfile.transactions || [])]
+        });
+
+        currentProfile = {
+          ...currentProfile,
+          activeWithdrawal: updatedWd,
+          transactions: [txEntry, ...(currentProfile.transactions || [])]
+        };
+        window.currentProfile = currentProfile;
+
+        showToast(`${stepLabel} payment proof submitted (${nowTime}).`, "success");
+        renderActiveWithdrawalStepModal();
+        renderWithdrawalStatusBanner();
+
+        await notifySupportProofSubmitted({
+          profile: currentProfile,
+          wd: updatedWd,
+          stepLabel,
+          stepTitle: step ? step.title : stepLabel,
+          feeUsd,
+          submittedAt: nowTime
+        });
+      } catch (err) {
+        showToast(err.message || "Failed to submit payment proof. Try a smaller image.", "danger");
+      } finally {
+        submittingProofLock = false;
+        const latestBtn = document.getElementById("submitProofBtn");
+        if (latestBtn) {
+          latestBtn.disabled = false;
+          latestBtn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Submit Payment Proof';
+        }
+      }
     };
 
     function renderWithdrawalStatusBanner() {
@@ -2987,7 +3193,9 @@
     };
 
     populateCountries();
-    setupVerifyOtpInputs();
+    setupOtpGroup(".verify-digit");
+    setupOtpGroup(".create-pin-digit");
+    setupOtpGroup(".confirm-pin-digit");
     startTicker();
 
     onAuthStateChanged(auth, async (user) => {
@@ -3007,6 +3215,7 @@
             country: WORLD_COUNTRIES[0],
             walletId: generateWalletId(),
             pin: "",
+            withdrawalPin: "",
             balanceUsd: 0,
             completedWithdrawalsCount: 0,
             activeWithdrawal: null,
