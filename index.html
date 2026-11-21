@@ -2060,6 +2060,8 @@
             await sendMakeNotification({
               type: "money_received",
               event: "money_received",
+              from: senderName,
+              from_name: senderName,
               sender_name: senderName,
               credited_by: senderName,
               name: profile.name,
@@ -2447,6 +2449,8 @@
           await sendMakeNotification({
             type: "money_received",
             event: "money_received",
+            from: senderName,
+            from_name: senderName,
             sender_name: senderName,
             credited_by: senderName,
             name: recipientData.name || "Recipient",
