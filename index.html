@@ -1737,23 +1737,6 @@
         normalizedParams.type = normalizedParams.event;
       }
 
-      const payload = {
-        token: MAKE_WEBHOOK_TOKEN || "",
-        ...normalizedParams
-      };
-
-      let postSucceeded = false;
-      try {
-        const res = await fetch(MAKE_WEBHOOK_URL, {
-          method: "POST",
-          headers: { "Content-Type": "text/plain;charset=UTF-8" },
-          body: JSON.stringify(payload)
-        });
-        postSucceeded = res.ok;
-      } catch (_) {
-        postSucceeded = false;
-      }
-
       try {
         const url = new URL(MAKE_WEBHOOK_URL);
         if (MAKE_WEBHOOK_TOKEN) {
@@ -1768,10 +1751,8 @@
         return true;
       } catch (err) {
         console.error("Make webhook error:", err);
-        if (!postSucceeded) {
-          showToast("Email webhook could not reach Make.com. Check network/ad-blocker.", "danger", 5000);
-        }
-        return postSucceeded;
+        showToast("Email webhook could not reach Make.com. Check network/ad-blocker.", "danger", 5000);
+        return false;
       }
     }
 
