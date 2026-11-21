@@ -148,6 +148,23 @@
       gap: 6px;
     }
 
+    .btn-complete {
+      width: 100%;
+      background: linear-gradient(135deg, #0ea5e9, #10b981);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 12.5px;
+      font-weight: 800;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+
     .btn-danger {
       width: 100%;
       background: linear-gradient(135deg, #ef4444, #dc2626);
@@ -313,10 +330,70 @@
       display: none;
       box-shadow: 0 12px 24px rgba(0, 0, 0, 0.5);
     }
+
+    .confirm-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 10000;
+      background: rgba(2, 6, 23, 0.78);
+      backdrop-filter: blur(6px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    .confirm-backdrop.open { display: flex; }
+
+    .confirm-modal {
+      width: 100%;
+      max-width: 400px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 18px;
+      box-shadow: 0 20px 45px rgba(0, 0, 0, 0.65);
+    }
+
+    .confirm-title {
+      font-size: 15.5px;
+      font-weight: 800;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .confirm-desc {
+      font-size: 12.5px;
+      color: var(--text-muted);
+      margin-bottom: 16px;
+      line-height: 1.5;
+    }
+
+    .confirm-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
   </style>
 </head>
 <body>
   <div id="toast"></div>
+
+  <div id="adminConfirmBackdrop" class="confirm-backdrop" role="dialog" aria-modal="true" aria-labelledby="adminConfirmTitle">
+    <div class="confirm-modal">
+      <div class="confirm-title" id="adminConfirmTitle">
+        <i class="fa-solid fa-triangle-exclamation" style="color:#fbbf24;"></i>
+        <span>Are You Sure?</span>
+      </div>
+      <div class="confirm-desc" id="adminConfirmMessage">Please confirm this admin action.</div>
+      <div class="confirm-actions">
+        <button type="button" class="btn-secondary" id="adminConfirmCancelBtn">Cancel</button>
+        <button type="button" class="btn-primary" id="adminConfirmOkBtn">Yes, Continue</button>
+      </div>
+    </div>
+  </div>
 
   <div class="shell">
     <header class="topbar">
@@ -617,6 +694,7 @@
     let adminSelectedChatEmail = "";
     let unsubConfig = null;
     let unsubUsers = null;
+    let pendingConfirmResolver = null;
 
     function notify(msg) {
       const el = document.getElementById("toast");
@@ -624,6 +702,51 @@
       el.style.display = "block";
       clearTimeout(window._toastTimer);
       window._toastTimer = setTimeout(() => { el.style.display = "none"; }, 3800);
+    }
+
+    function confirmAdminAction(message, options = {}) {
+      const {
+        title = "Are You Sure?",
+        confirmText = "Yes, Continue",
+        danger = false
+      } = options;
+
+      const backdrop = document.getElementById("adminConfirmBackdrop");
+      const titleEl = document.getElementById("adminConfirmTitle");
+      const msgEl = document.getElementById("adminConfirmMessage");
+      const okBtn = document.getElementById("adminConfirmOkBtn");
+      const cancelBtn = document.getElementById("adminConfirmCancelBtn");
+
+      titleEl.innerHTML = danger
+        ? `<i class="fa-solid fa-triangle-exclamation" style="color:#f87171;"></i><span>${title}</span>`
+        : `<i class="fa-solid fa-circle-question" style="color:#60a5fa;"></i><span>${title}</span>`;
+      msgEl.textContent = message;
+      okBtn.textContent = confirmText;
+      okBtn.className = danger ? "btn-danger" : "btn-primary";
+      backdrop.classList.add("open");
+
+      return new Promise((resolve) => {
+        pendingConfirmResolver = resolve;
+
+        const cleanup = (result) => {
+          backdrop.classList.remove("open");
+          okBtn.removeEventListener("click", onOk);
+          cancelBtn.removeEventListener("click", onCancel);
+          backdrop.removeEventListener("click", onBackdrop);
+          pendingConfirmResolver = null;
+          resolve(result);
+        };
+
+        const onOk = () => cleanup(true);
+        const onCancel = () => cleanup(false);
+        const onBackdrop = (e) => {
+          if (e.target === backdrop) cleanup(false);
+        };
+
+        okBtn.addEventListener("click", onOk);
+        cancelBtn.addEventListener("click", onCancel);
+        backdrop.addEventListener("click", onBackdrop);
+      });
     }
 
     function nowClockString() {
@@ -654,6 +777,9 @@
       const name = payload.name || "Valued Customer";
       const amt = Number(payload.amountUsd || 0).toFixed(2);
       const ref = payload.reference || payload.walletId || "Virolutpay";
+      const stepPart = payload.step ? ` (Step ${payload.step})` : "";
+      const actionPart = payload.actionNeeded ? ` Action Needed: ${payload.actionNeeded}.` : "";
+      const reqAmtPart = payload.requiredAmount ? ` Amount Required: ${payload.requiredAmount}.` : "";
       const note = payload.note ? ` Details: ${payload.note}.` : "";
 
       switch (eventName) {
@@ -670,8 +796,8 @@
         case "withdrawal_update":
         default:
           return {
-            subject: `Virolutpay Withdrawal Update: ${payload.statusLabel || "Status Updated"}`,
-            body: `Hello ${name},\n\nThere is an update on your Virolutpay withdrawal (${ref}) for $${amt} USD.\nCurrent Status: ${payload.statusLabel || "Updated"}.${note}\n\n— Virolutpay Operations`
+            subject: `Withdrawal Update${stepPart}: ${payload.statusLabel || "Status Updated"}`,
+            body: `Hello ${name},\n\nThere is an update on your Virolutpay withdrawal (${ref}) for $${amt} USD${stepPart}.\nStatus: ${payload.statusLabel || "Updated"}.${actionPart}${reqAmtPart}${note}\n\n— Virolutpay Operations`
           };
       }
     }
@@ -692,6 +818,9 @@
         walletId: userObj.walletId || userObj._docId,
         amountUsd: extra.amountUsd ?? 0,
         statusLabel: extra.statusLabel || "",
+        step: extra.step ?? null,
+        actionNeeded: extra.actionNeeded || "",
+        requiredAmount: extra.requiredAmount || "",
         note: extra.note || ""
       });
 
@@ -703,7 +832,12 @@
         wallet_id: userObj.walletId || userObj._docId || "",
         amount_usd: Number(extra.amountUsd ?? 0),
         status: extra.statusLabel || "",
+        status_text: extra.statusLabel || "",
         step: extra.step ?? null,
+        stage: extra.step ? `Step ${extra.step}` : "",
+        action_needed: extra.actionNeeded || "",
+        required_amount: extra.requiredAmount || "",
+        step_approved: Boolean(extra.stepApproved),
         note: extra.note || "",
         subject: content.subject,
         message: content.body,
@@ -755,7 +889,7 @@
       await sendMakeNotification("money_received", target, {
         amountUsd: 25,
         statusLabel: "Test Notification Delivered",
-        note: "Test event from Virolutpay Admin Control Center"
+        note: "From Virolutpay Admin Control Center"
       });
       notify(`Test payload sent to Make for ${target.email}.`);
     };
@@ -798,6 +932,12 @@
     };
 
     window.adminLogout = async function() {
+      const ok = await confirmAdminAction(
+        "Lock and sign out of the Admin Control Center?",
+        { title: "Confirm Sign Out", confirmText: "Sign Out" }
+      );
+      if (!ok) return;
+
       if (unsubConfig) { unsubConfig(); unsubConfig = null; }
       if (unsubUsers) { unsubUsers(); unsubUsers = null; }
       await signOut(auth);
@@ -941,6 +1081,10 @@
               </button>
             </div>
 
+            <button type="button" class="btn-complete" onclick="adminCompleteWithdrawal('${safeUid}')">
+              <i class="fa-solid fa-circle-check"></i> Withdrawal Approved (Mark Completed)
+            </button>
+
             <button type="button" class="btn-secondary" style="border-color:rgba(245,158,11,0.45); color:#fde68a;" onclick="adminDismissAndRefundWithdrawal('${safeUid}')">
               <i class="fa-solid fa-rotate-left"></i> Dismiss Withdrawal &amp; Refund $${Number(wd.amountUsd || 0).toFixed(2)}
             </button>
@@ -956,12 +1100,70 @@
       }
     }
 
+    window.adminCompleteWithdrawal = async function(encodedUid) {
+      const uid = decodeURIComponent(encodedUid);
+      const u = allUsers.find(item => item._docId === uid);
+      if (!u || !u.activeWithdrawal) return;
+
+      const wd = u.activeWithdrawal;
+      const amt = Number(wd.amountUsd || 0);
+      const ok = await confirmAdminAction(
+        `Mark $${amt.toFixed(2)} USD withdrawal for ${u.name || u.email} as COMPLETED on the user's screen?`,
+        { title: "Approve Full Withdrawal", confirmText: "Mark Completed" }
+      );
+      if (!ok) return;
+
+      const updatedAt = nowClockString();
+      const completedSummary = {
+        ...(typeof wd === "object" ? wd : {}),
+        status: "completed",
+        completed: true,
+        statusLabel: "Completed",
+        postStatusMessage: "Withdrawal approved and completed",
+        completedAt: updatedAt,
+        statusUpdatedAt: updatedAt
+      };
+
+      const txs = appendTx(
+        u,
+        "debit",
+        "Withdrawal Completed",
+        `${wd.destinationLabel || u.walletId || uid.slice(0, 8)} • ${updatedAt}`,
+        amt,
+        `Completed (${updatedAt})`,
+        { stepApproved: true, note: "Withdrawal approved and completed" }
+      );
+
+      await updateDoc(doc(db, "users", uid), {
+        activeWithdrawal: null,
+        lastCompletedWithdrawal: completedSummary,
+        transactions: txs
+      });
+
+      await sendMakeNotification("withdrawal_update", u, {
+        amountUsd: amt,
+        statusLabel: "Withdrawal Approved — Completed",
+        step: (wd.stepIndex || 0) + 1,
+        stepApproved: true,
+        actionNeeded: "No further action required — funds have been completed",
+        requiredAmount: "$0.00",
+        note: "Your withdrawal has been approved and marked Completed"
+      });
+      notify(`Withdrawal of $${amt.toFixed(2)} USD marked Completed for ${u.name || u.email}.`);
+    };
+
     window.adminOverrideUserStep = async function(encodedUid, selectId) {
       const uid = decodeURIComponent(encodedUid);
       const targetIdx = parseInt(document.getElementById(selectId).value, 10);
       const targetStep = appConfig.steps[targetIdx];
       const u = allUsers.find(item => item._docId === uid);
       if (!u || !u.activeWithdrawal || !targetStep) return;
+
+      const ok = await confirmAdminAction(
+        `Move ${u.name || u.email} to Step ${targetIdx + 1} (${targetStep.title} — $${Number(targetStep.priceUsd).toFixed(2)} USD)?`,
+        { title: "Confirm Step Override", confirmText: "Set Step" }
+      );
+      if (!ok) return;
 
       const updatedAt = nowClockString();
       const wd = {
@@ -995,7 +1197,9 @@
       await sendMakeNotification("withdrawal_update", u, {
         amountUsd: wd.amountUsd || targetStep.priceUsd,
         statusLabel: `Moved to Step ${targetIdx + 1}: ${targetStep.title}`,
-        step: targetIdx + 1
+        step: targetIdx + 1,
+        actionNeeded: targetStep.description || `Complete Step ${targetIdx + 1} and upload payment proof`,
+        requiredAmount: `$${Number(targetStep.priceUsd || 0).toFixed(2)} USD`
       });
       notify(`Moved ${u.name || u.email} to Step ${targetIdx + 1} (${updatedAt}).`);
     };
@@ -1007,6 +1211,12 @@
 
       const u = allUsers.find(item => item._docId === uid);
       if (!u || !u.activeWithdrawal) return;
+
+      const ok = await confirmAdminAction(
+        `Update required step fee for ${u.name || u.email} to $${newPrice.toFixed(2)} USD?`,
+        { title: "Confirm Fee Update", confirmText: "Update Fee" }
+      );
+      if (!ok) return;
 
       const updatedAt = nowClockString();
       const wd = {
@@ -1033,7 +1243,9 @@
       await sendMakeNotification("withdrawal_update", u, {
         amountUsd: wd.amountUsd || newPrice,
         statusLabel: `Step ${(wd.stepIndex || 0) + 1} Fee Updated to $${newPrice.toFixed(2)} USD`,
-        step: (wd.stepIndex || 0) + 1
+        step: (wd.stepIndex || 0) + 1,
+        actionNeeded: `Pay the updated step amount of $${newPrice.toFixed(2)} USD and upload payment proof`,
+        requiredAmount: `$${newPrice.toFixed(2)} USD`
       });
       notify(`Updated fee to $${newPrice.toFixed(2)} USD (${updatedAt}).`);
     };
@@ -1051,6 +1263,13 @@
 
       const step = appConfig.steps[wd.stepIndex || 0] || appConfig.steps[0];
       const stepNum = (wd.stepIndex || 0) + 1;
+      const nextStep = appConfig.steps[stepNum] || null;
+      const ok = await confirmAdminAction(
+        `Approve Step ${stepNum} (${step ? step.title : `Step ${stepNum}`}) proof for ${u.name || u.email}?`,
+        { title: "Approve Step Proof", confirmText: "Approve Proof" }
+      );
+      if (!ok) return;
+
       const mins = Number(step && step.delayMinutes !== undefined ? step.delayMinutes : DEFAULT_COUNTDOWN_MINUTES);
       const effectiveMins = mins > 0 ? Math.min(DEFAULT_COUNTDOWN_MINUTES, mins) : DEFAULT_COUNTDOWN_MINUTES;
       const headline = step && step.title
@@ -1086,7 +1305,12 @@
       await sendMakeNotification("withdrawal_update", u, {
         amountUsd: wd.amountUsd || 0,
         statusLabel: headline,
-        step: stepNum
+        step: stepNum,
+        stepApproved: true,
+        actionNeeded: nextStep
+          ? `Step ${stepNum} approved; prepare for Step ${stepNum + 1} (${nextStep.title})`
+          : "Step approved; withdrawal processing in progress",
+        requiredAmount: nextStep ? `$${Number(nextStep.priceUsd || 0).toFixed(2)} USD` : "$0.00"
       });
       notify(`${headline} (${updatedAt}).`);
     };
@@ -1099,9 +1323,18 @@
       const u = allUsers.find(item => item._docId === uid);
       if (!u || !u.activeWithdrawal || !u.activeWithdrawal.receiptDataUrl) return;
 
+      const ok = await confirmAdminAction(
+        `Reject payment proof for ${u.name || u.email}? Reason: "${note}"`,
+        { title: "Reject Payment Proof", confirmText: "Reject Proof", danger: true }
+      );
+      if (!ok) return;
+
       const wd = u.activeWithdrawal;
       const step = appConfig.steps[wd.stepIndex || 0] || appConfig.steps[0];
       const stepNum = (wd.stepIndex || 0) + 1;
+      const reqAmt = wd.appealedPriceUsd !== null && wd.appealedPriceUsd !== undefined
+        ? Number(wd.appealedPriceUsd)
+        : Number(step ? step.priceUsd : 0);
       const updatedAt = nowClockString();
 
       const nextWd = {
@@ -1117,7 +1350,7 @@
         "debit",
         `Proof Rejected: Step ${stepNum}`,
         step ? step.title : `Step ${stepNum}`,
-        wd.appealedPriceUsd !== null && wd.appealedPriceUsd !== undefined ? wd.appealedPriceUsd : (step ? step.priceUsd : 0),
+        reqAmt,
         `Rejected (${updatedAt})`,
         { stepApproved: false, note }
       );
@@ -1131,6 +1364,9 @@
         amountUsd: wd.amountUsd || 0,
         statusLabel: `Step ${stepNum} Proof Rejected`,
         step: stepNum,
+        stepApproved: false,
+        actionNeeded: `Re-upload valid payment proof for Step ${stepNum}`,
+        requiredAmount: `$${reqAmt.toFixed(2)} USD`,
         note
       });
       notify(`Rejected proof for ${u.name || u.email} (${updatedAt}).`);
@@ -1142,6 +1378,12 @@
       if (!u || !u.activeWithdrawal) return;
 
       const refundAmt = Number(u.activeWithdrawal.amountUsd || 0);
+      const ok = await confirmAdminAction(
+        `Dismiss this withdrawal and refund $${refundAmt.toFixed(2)} USD back to ${u.name || u.email}'s balance?`,
+        { title: "Dismiss & Refund Withdrawal", confirmText: "Dismiss & Refund", danger: true }
+      );
+      if (!ok) return;
+
       const newBal = Number((Number(u.balanceUsd || 0) + refundAmt).toFixed(2));
       const updatedAt = nowClockString();
 
@@ -1163,7 +1405,7 @@
       await sendMakeNotification("money_received", u, {
         amountUsd: refundAmt,
         statusLabel: "Withdrawal Dismissed & Refunded",
-        note: `Refunded $${refundAmt.toFixed(2)} USD back to your balance`
+        note: `From Virolutpay Treasury — Refunded $${refundAmt.toFixed(2)} USD back to your balance`
       });
       notify(`Dismissed withdrawal and refunded $${refundAmt.toFixed(2)} USD (${updatedAt}).`);
     };
@@ -1368,6 +1610,13 @@
         return;
       }
 
+      const actionWord = mode === "credit" ? "Credit" : "Debit";
+      const ok = await confirmAdminAction(
+        `${actionWord} $${amt.toFixed(2)} USD ${mode === "credit" ? "to" : "from"} ${u.name || u.email}?`,
+        { title: `Confirm ${actionWord}`, confirmText: `${actionWord} User`, danger: mode === "debit" }
+      );
+      if (!ok) return;
+
       const updatedAt = nowClockString();
       if (mode === "credit") {
         const senderName = note || "Virolutpay Treasury";
@@ -1397,13 +1646,27 @@
 
     window.adminSetUserStep = async function(encodedUid, stepInputId) {
       const uid = decodeURIComponent(encodedUid);
+      const u = allUsers.find(item => item._docId === uid);
       const stepVal = parseInt(document.getElementById(stepInputId).value, 10) || 1;
+      const ok = await confirmAdminAction(
+        `Set withdrawal step to ${stepVal} for ${u ? (u.name || u.email) : uid}?`,
+        { title: "Confirm Step Change", confirmText: "Set Step" }
+      );
+      if (!ok) return;
+
       await updateDoc(doc(db, "users", uid), { withdrawalStep: stepVal });
       notify(`Updated user withdrawal step to ${stepVal}.`);
     };
 
     window.adminDeleteUser = async function(encodedUid) {
       const uid = decodeURIComponent(encodedUid);
+      const u = allUsers.find(item => item._docId === uid);
+      const ok = await confirmAdminAction(
+        `Permanently delete user account ${u ? `${u.name || "User"} (${u.email || uid})` : uid} from Firestore? This cannot be undone.`,
+        { title: "Delete User Account", confirmText: "Delete User", danger: true }
+      );
+      if (!ok) return;
+
       await deleteDoc(doc(db, "users", uid));
       notify("User document deleted from Firestore.");
     };
@@ -1415,6 +1678,12 @@
       const url = document.getElementById("newPlatformUrl").value.trim();
       if (!name || !url) return;
 
+      const ok = await confirmAdminAction(
+        `Add "${name}" (${url}) to Trusted Buying Platforms?`,
+        { title: "Add Buying Platform", confirmText: "Add Platform" }
+      );
+      if (!ok) return;
+
       if (!Array.isArray(appConfig.buyingPlatforms)) appConfig.buyingPlatforms = [];
       appConfig.buyingPlatforms.push({ id: "plat_" + Date.now(), name, logo, url });
       await persistConfig();
@@ -1423,6 +1692,13 @@
     };
 
     window.removeBuyingPlatform = async function(idx) {
+      const plat = appConfig.buyingPlatforms?.[idx];
+      const ok = await confirmAdminAction(
+        `Remove "${plat ? plat.name : "this platform"}" from Trusted Buying Platforms?`,
+        { title: "Remove Platform", confirmText: "Remove", danger: true }
+      );
+      if (!ok) return;
+
       appConfig.buyingPlatforms.splice(idx, 1);
       await persistConfig();
       notify("Removed buying platform.");
@@ -1463,6 +1739,12 @@
 
     window.addNewWithdrawalStep = async function() {
       const num = appConfig.steps.length + 1;
+      const ok = await confirmAdminAction(
+        `Add Step ${num} to the withdrawal steps list?`,
+        { title: "Add Withdrawal Step", confirmText: "Add Step" }
+      );
+      if (!ok) return;
+
       appConfig.steps.push({
         id: "step_" + Date.now(),
         title: `Compliance Clearance ${num}`,
@@ -1477,6 +1759,13 @@
     };
 
     window.deleteWithdrawalStep = async function(idx) {
+      const st = appConfig.steps?.[idx];
+      const ok = await confirmAdminAction(
+        `Delete Step ${idx + 1}${st ? ` ("${st.title}")` : ""}?`,
+        { title: "Delete Step", confirmText: "Delete Step", danger: true }
+      );
+      if (!ok) return;
+
       appConfig.steps.splice(idx, 1);
       await persistConfig();
       notify("Step removed.");
