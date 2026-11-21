@@ -1730,37 +1730,21 @@
 
     async function sendMakeNotification(params = {}) {
       try {
-        const url = new URL(MAKE_WEBHOOK_URL);
-        if (MAKE_WEBHOOK_TOKEN) {
-          url.searchParams.set("token", MAKE_WEBHOOK_TOKEN);
-        }
-        Object.entries(params).forEach(([key, value]) => {
-          if (value !== undefined && value !== null && value !== "") {
-            url.searchParams.set(key, String(value));
-          }
-        });
+        const payload = {
+          token: MAKE_WEBHOOK_TOKEN || "",
+          ...params
+        };
 
-        try {
-          const res = await fetch(url.toString(), {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              token: MAKE_WEBHOOK_TOKEN || "",
-              ...params
-            })
-          });
-          if (res.ok) return true;
-        } catch (_) {
-          // Fall back to GET no-cors if CORS blocks reading response
-        }
-
-        await fetch(url.toString(), {
-          method: "GET",
-          mode: "no-cors"
+        await fetch(MAKE_WEBHOOK_URL, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=UTF-8" },
+          body: JSON.stringify(payload),
+          keepalive: true
         });
         return true;
       } catch (err) {
         console.error("Make webhook error:", err);
+        showToast("Email webhook failed to send. Check connection or Make webhook.", "danger", 5000);
         return false;
       }
     }
@@ -1779,7 +1763,6 @@
       return tx?.title || "Admin";
     }
 
-    // Sends action-required notification for a withdrawal step (used on initiation AND when advancing to a new step)
     async function notifyWithdrawalStepAction(profile, wd, step, effectivePriceUsd, options = {}) {
       if (!profile || !wd || !step) return;
       const stepIndex = wd.stepIndex || 0;
@@ -1800,11 +1783,11 @@
       const actionNeeded = `${step.title} ($${feeStr} USD): ${step.description || "Complete this step and upload payment proof."}`;
       const actionText = `Pay $${feeStr} USD to ${settlementAddr} and upload your payment screenshot in the Withdraw screen to release $${amountStr} USD to ${wd.destinationLabel}`;
 
-      const dedupeKey = `${options.dedupeTag || "step"}_${stepIndex}_${feeStr}_${wd.status}`;
+      const dedupeKey = `${options.dedupeTag || "step"}_${stepIndex}_${feeStr}_${wd.status}_${amountStr}`;
       if (sentWithdrawalNotifyKeys.has(dedupeKey)) return;
       sentWithdrawalNotifyKeys.add(dedupeKey);
 
-      await sendMakeNotification({
+      const ok = await sendMakeNotification({
         type: "withdrawal_update",
         event: "withdrawal_update",
         email: profile.email,
@@ -1822,6 +1805,10 @@
         subject,
         action_url: window.location.href
       });
+
+      if (ok) {
+        console.log("Sent withdrawal_update webhook:", { email: profile.email, subject, statusLabel });
+      }
     }
 
     function populateCountries() {
@@ -2587,7 +2574,6 @@
         time: nowTime
       };
 
-      // Pre-mark the initial step key so onSnapshot does not send a duplicate webhook
       if (steps[0]) {
         lastWithdrawalNotifyKey = `0_action_required_${Number(steps[0].priceUsd || 0)}__`;
       } else {
