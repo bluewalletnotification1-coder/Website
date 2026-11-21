@@ -678,7 +678,14 @@
 
     async function sendMakeNotification(eventName, userObj = {}, extra = {}) {
       const hookUrl = (appConfig.makeWebhookUrl || "").trim();
-      if (!hookUrl || !userObj.email) return;
+      if (!hookUrl) {
+        notify("Make webhook URL is empty. Save it first.");
+        return;
+      }
+      if (!userObj.email) {
+        notify("User email is missing; skipped Make notification.");
+        return;
+      }
 
       const content = buildNotificationContent(eventName, {
         name: userObj.name,
@@ -690,6 +697,7 @@
 
       const body = {
         event: eventName,
+        type: eventName,
         email: userObj.email,
         name: userObj.name || "User",
         wallet_id: userObj.walletId || userObj._docId || "",
@@ -705,13 +713,17 @@
       };
 
       try {
-        await fetch(hookUrl, {
+        const res = await fetch(hookUrl, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(body)
         });
+        if (!res.ok) {
+          notify(`Make webhook returned HTTP ${res.status}`);
+        }
       } catch (err) {
         console.warn("Make webhook trigger failed:", err);
+        notify("Network/CORS error calling Make webhook.");
       }
     }
 
