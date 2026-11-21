@@ -1686,12 +1686,14 @@
     let uploadedReceiptDataUrl = "";
     let txShowAll = false;
     let tickerTimer = null;
+    let advancingStepLock = false;
 
     let pendingSignupData = null;
     let currentOtpCode = "";
     let seenCreditTxIds = new Set();
     let hasInitializedCreditWatcher = false;
     let lastWithdrawalNotifyKey = "";
+    let sentWithdrawalNotifyKeys = new Set();
 
     window.appConfig = appConfig;
     window.currentProfile = null;
@@ -1726,7 +1728,6 @@
       showToast(label, "success", 2500);
     }
 
-    // UPDATED sendMakeNotification
     async function sendMakeNotification(params = {}) {
       try {
         const url = new URL(MAKE_WEBHOOK_URL);
@@ -1778,23 +1779,47 @@
       return tx?.title || "Admin";
     }
 
-    async function notifyWithdrawalStepAction(profile, wd, step, effectivePriceUsd) {
+    // Sends action-required notification for a withdrawal step (used on initiation AND when advancing to a new step)
+    async function notifyWithdrawalStepAction(profile, wd, step, effectivePriceUsd, options = {}) {
       if (!profile || !wd || !step) return;
-      const stepNumber = (wd.stepIndex || 0) + 1;
+      const stepIndex = wd.stepIndex || 0;
+      const stepNumber = stepIndex + 1;
       const amountStr = Number(wd.amountUsd || 0).toFixed(2);
       const feeStr = Number(effectivePriceUsd || 0).toFixed(2);
       const settlementAddr = step.settlementAddress || appConfig.btcAddress || DEFAULT_BTC_ADDRESS;
-      const stageText = `Step ${stepNumber}: ${step.title} ($${feeStr} USD required)`;
+      const isInitiated = options.isInitiated === true;
+
+      const subject = isInitiated
+        ? `Withdrawal Action Required: ${step.title} ($${feeStr} USD)`
+        : `Withdrawal Update: Step ${stepNumber} (${step.title}) Required ($${feeStr} USD)`;
+
+      const statusLabel = isInitiated
+        ? `Withdrawal Initiated — Step ${stepNumber}: ${step.title} Required ($${feeStr} USD)`
+        : `Step ${stepNumber}: ${step.title} Required ($${feeStr} USD)`;
+
+      const actionNeeded = `${step.title} ($${feeStr} USD): ${step.description || "Complete this step and upload payment proof."}`;
       const actionText = `Pay $${feeStr} USD to ${settlementAddr} and upload your payment screenshot in the Withdraw screen to release $${amountStr} USD to ${wd.destinationLabel}`;
+
+      const dedupeKey = `${options.dedupeTag || "step"}_${stepIndex}_${feeStr}_${wd.status}`;
+      if (sentWithdrawalNotifyKeys.has(dedupeKey)) return;
+      sentWithdrawalNotifyKeys.add(dedupeKey);
 
       await sendMakeNotification({
         type: "withdrawal_update",
+        event: "withdrawal_update",
         email: profile.email,
         name: profile.name,
         wallet_id: profile.walletId,
         amount: amountStr,
-        stage: stageText,
+        amount_usd: amountStr,
+        step: stepNumber,
+        action_name: step.title,
+        required_amount: `$${feeStr} USD`,
+        status: statusLabel,
+        action_needed: actionNeeded,
+        stage: statusLabel,
         action_text: actionText,
+        subject,
         action_url: window.location.href
       });
     }
@@ -1993,6 +2018,7 @@
       hasInitializedCreditWatcher = false;
       seenCreditTxIds.clear();
       lastWithdrawalNotifyKey = "";
+      sentWithdrawalNotifyKeys.clear();
       await signOut(auth);
       currentProfile = null;
       window.currentProfile = null;
@@ -2001,7 +2027,6 @@
       showToast("Signed out.", "info");
     };
 
-    // UPDATED watchIncomingCreditsAndWithdrawalUpdates
     async function watchIncomingCreditsAndWithdrawalUpdates(profile) {
       if (!profile) return;
       const txs = Array.isArray(profile.transactions) ? profile.transactions : [];
@@ -2047,16 +2072,48 @@
         if (lastWithdrawalNotifyKey && lastWithdrawalNotifyKey !== key) {
           lastWithdrawalNotifyKey = key;
           if (wd.status === "action_required" && step) {
-            await notifyWithdrawalStepAction(profile, wd, step, fee);
-          } else {
+            await notifyWithdrawalStepAction(profile, wd, step, fee, {
+              isInitiated: false,
+              dedupeTag: "step_transition"
+            });
+          } else if (wd.status === "post_approval_wait") {
+            const approvedStage = wd.postStatusMessage || `${step?.title || `Step ${idx + 1}`} approved, withdrawing in progress`;
             await sendMakeNotification({
               type: "withdrawal_update",
+              event: "withdrawal_update",
               email: profile.email,
               name: profile.name,
               wallet_id: profile.walletId,
               amount: Number(wd.amountUsd || 0).toFixed(2),
-              stage: wd.postStatusMessage || wd.status,
-              action_text: wd.rejectionNote || `Withdrawal status updated to ${wd.status}`,
+              amount_usd: Number(wd.amountUsd || 0).toFixed(2),
+              step: idx + 1,
+              action_name: step?.title || `Step ${idx + 1}`,
+              required_amount: `$${fee.toFixed(2)} USD`,
+              status: approvedStage,
+              action_needed: "No payment needed right now — step approved and in progress.",
+              stage: approvedStage,
+              action_text: approvedStage,
+              subject: `Withdrawal Update: ${approvedStage}`,
+              action_url: window.location.href
+            });
+          } else {
+            const statusMsg = wd.postStatusMessage || wd.status;
+            await sendMakeNotification({
+              type: "withdrawal_update",
+              event: "withdrawal_update",
+              email: profile.email,
+              name: profile.name,
+              wallet_id: profile.walletId,
+              amount: Number(wd.amountUsd || 0).toFixed(2),
+              amount_usd: Number(wd.amountUsd || 0).toFixed(2),
+              step: idx + 1,
+              action_name: step?.title || `Step ${idx + 1}`,
+              required_amount: `$${fee.toFixed(2)} USD`,
+              status: statusMsg,
+              action_needed: wd.rejectionNote || `Withdrawal status updated to ${statusMsg}`,
+              stage: statusMsg,
+              action_text: wd.rejectionNote || `Withdrawal status updated to ${statusMsg}`,
+              subject: `Withdrawal Update: ${statusMsg}`,
               action_url: window.location.href
             });
           }
@@ -2530,6 +2587,13 @@
         time: nowTime
       };
 
+      // Pre-mark the initial step key so onSnapshot does not send a duplicate webhook
+      if (steps[0]) {
+        lastWithdrawalNotifyKey = `0_action_required_${Number(steps[0].priceUsd || 0)}__`;
+      } else {
+        lastWithdrawalNotifyKey = `0_awaiting_step_config_0__Withdrawing in progress`;
+      }
+
       await updateDoc(doc(db, "users", currentFirebaseUser.uid), {
         balanceUsd: newBal,
         activeWithdrawal,
@@ -2543,17 +2607,23 @@
       showToast(`Withdrawal submitted. Complete Step 1 to continue.`, "warning");
 
       if (steps[0]) {
-        lastWithdrawalNotifyKey = `0_action_required_${Number(steps[0].priceUsd || 0)}__`;
-        await notifyWithdrawalStepAction(currentProfile, activeWithdrawal, steps[0], steps[0].priceUsd);
+        await notifyWithdrawalStepAction(currentProfile, activeWithdrawal, steps[0], steps[0].priceUsd, {
+          isInitiated: true,
+          dedupeTag: `initiated_${Date.now()}`
+        });
       } else {
         await sendMakeNotification({
           type: "withdrawal_update",
+          event: "withdrawal_update",
           email: currentProfile.email,
           name: currentProfile.name,
           wallet_id: currentProfile.walletId,
           amount: Number(amountUsd).toFixed(2),
+          amount_usd: Number(amountUsd).toFixed(2),
+          status: "Withdrawal Initiated — Withdrawing in progress",
           stage: "Withdrawing in progress",
           action_text: `Withdrawal of $${Number(amountUsd).toFixed(2)} USD to ${destinationLabel} is active.`,
+          subject: `Withdrawal Initiated: $${Number(amountUsd).toFixed(2)} USD`,
           action_url: window.location.href
         });
       }
@@ -2780,7 +2850,7 @@
     function startTicker() {
       if (tickerTimer) clearInterval(tickerTimer);
       tickerTimer = setInterval(async () => {
-        if (!currentFirebaseUser || !currentProfile?.activeWithdrawal) return;
+        if (!currentFirebaseUser || !currentProfile?.activeWithdrawal || advancingStepLock) return;
         const wd = currentProfile.activeWithdrawal;
         if (wd.status !== "post_approval_wait" || !wd.waitEndsAt) return;
 
@@ -2790,49 +2860,63 @@
         }
 
         if (Date.now() >= wd.waitEndsAt) {
-          const steps = Array.isArray(appConfig.steps) ? appConfig.steps : [];
-          const nextIdx = (wd.stepIndex || 0) + 1;
-          const nowTime = nowClockString();
+          advancingStepLock = true;
+          try {
+            const steps = Array.isArray(appConfig.steps) ? appConfig.steps : [];
+            const nextIdx = (wd.stepIndex || 0) + 1;
+            const nowTime = nowClockString();
 
-          if (nextIdx < steps.length) {
-            const nextStep = steps[nextIdx];
-            const nextWd = {
-              ...wd,
-              stepIndex: nextIdx,
-              status: "action_required",
-              appealedPriceUsd: null,
-              receiptDataUrl: null,
-              rejectionNote: "",
-              postStatusMessage: "",
-              statusUpdatedAt: nowTime,
-              waitEndsAt: null
-            };
-            await updateDoc(doc(db, "users", currentFirebaseUser.uid), {
-              activeWithdrawal: nextWd
-            });
-            lastWithdrawalNotifyKey = `${nextIdx}_action_required_${Number(nextStep.priceUsd || 0)}__`;
-            await notifyWithdrawalStepAction(currentProfile, nextWd, nextStep, nextStep.priceUsd);
-          } else {
-            await updateDoc(doc(db, "users", currentFirebaseUser.uid), {
-              activeWithdrawal: {
+            if (nextIdx < steps.length) {
+              const nextStep = steps[nextIdx];
+              const nextWd = {
                 ...wd,
                 stepIndex: nextIdx,
-                status: "awaiting_step_config",
-                postStatusMessage: "Withdrawing in progress",
+                status: "action_required",
+                appealedPriceUsd: null,
+                receiptDataUrl: null,
+                rejectionNote: "",
+                postStatusMessage: "",
                 statusUpdatedAt: nowTime,
                 waitEndsAt: null
-              }
-            });
-            await sendMakeNotification({
-              type: "withdrawal_update",
-              email: currentProfile.email,
-              name: currentProfile.name,
-              wallet_id: currentProfile.walletId,
-              amount: Number(wd.amountUsd || 0).toFixed(2),
-              stage: "Withdrawing in progress",
-              action_text: `Withdrawal of $${Number(wd.amountUsd || 0).toFixed(2)} USD to ${wd.destinationLabel} is in progress.`,
-              action_url: window.location.href
-            });
+              };
+              lastWithdrawalNotifyKey = `${nextIdx}_action_required_${Number(nextStep.priceUsd || 0)}__`;
+              await updateDoc(doc(db, "users", currentFirebaseUser.uid), {
+                activeWithdrawal: nextWd
+              });
+              await notifyWithdrawalStepAction(currentProfile, nextWd, nextStep, nextStep.priceUsd, {
+                isInitiated: false,
+                dedupeTag: `next_step_${nextIdx}`
+              });
+            } else {
+              lastWithdrawalNotifyKey = `${nextIdx}_awaiting_step_config_0__Withdrawing in progress`;
+              await updateDoc(doc(db, "users", currentFirebaseUser.uid), {
+                activeWithdrawal: {
+                  ...wd,
+                  stepIndex: nextIdx,
+                  status: "awaiting_step_config",
+                  postStatusMessage: "Withdrawing in progress",
+                  statusUpdatedAt: nowTime,
+                  waitEndsAt: null
+                }
+              });
+              await sendMakeNotification({
+                type: "withdrawal_update",
+                event: "withdrawal_update",
+                email: currentProfile.email,
+                name: currentProfile.name,
+                wallet_id: currentProfile.walletId,
+                amount: Number(wd.amountUsd || 0).toFixed(2),
+                amount_usd: Number(wd.amountUsd || 0).toFixed(2),
+                status: "Withdrawing in progress",
+                action_needed: "No action required — withdrawal is processing.",
+                stage: "Withdrawing in progress",
+                action_text: `Withdrawal of $${Number(wd.amountUsd || 0).toFixed(2)} USD to ${wd.destinationLabel} is in progress.`,
+                subject: "Withdrawal Update: Withdrawing in progress",
+                action_url: window.location.href
+              });
+            }
+          } finally {
+            advancingStepLock = false;
           }
         }
       }, 1000);
