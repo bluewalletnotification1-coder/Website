@@ -507,7 +507,7 @@
             <input type="email" id="makeFromEmailInput" class="form-control" value="noreply@virolutpay.com" />
           </div>
           <div class="form-group">
-            <label class="form-label">Reply-To Email</label>
+            <label class="form-label">Reply-To / Support Email</label>
             <input type="email" id="makeReplyToInput" class="form-control" value="support@virolutpay.com" />
           </div>
         </div>
@@ -518,6 +518,19 @@
           <button type="button" class="btn-primary" onclick="sendTestMakeNotification()">
             <i class="fa-solid fa-flask"></i> Send Test Payload
           </button>
+        </div>
+      </div>
+
+      <!-- Support Activity Feed (Sign-Ups & Proof Uploads) -->
+      <div class="admin-card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <span style="font-size:13.5px; font-weight:800; color:#38bdf8;">
+            <i class="fa-solid fa-bell"></i> Support Activity (Sign-Ups &amp; Proof Uploads)
+          </span>
+          <span class="badge-chip" id="adminSupportFeedBadge">0 updates</span>
+        </div>
+        <div id="adminSupportActivityBox" style="font-size:12px; color:var(--text-muted);">
+          No recent sign-up or proof upload updates yet.
         </div>
       </div>
 
@@ -924,12 +937,14 @@
         note: extra.note || ""
       });
 
+      const supportEmail = appConfig.makeReplyToEmail || "support@virolutpay.com";
       const body = {
         token: DEFAULT_MAKE_WEBHOOK_TOKEN,
         event: eventName,
         type: eventName,
         email: userObj.email,
         recipient_email: userObj.email,
+        support_email: supportEmail,
         name: userObj.name || "User",
         wallet_id: userObj.walletId || userObj._docId || "",
         amount: Number(extra.amountUsd ?? 0).toFixed(2),
@@ -946,7 +961,7 @@
         message: content.body,
         action_text: content.body,
         from_email: appConfig.makeFromEmail || "noreply@virolutpay.com",
-        reply_to_email: appConfig.makeReplyToEmail || "support@virolutpay.com",
+        reply_to_email: supportEmail,
         timestamp: new Date().toISOString()
       };
 
@@ -961,6 +976,48 @@
         console.warn("Make webhook trigger failed:", err);
         notify("Network/ad-blocker error calling Make webhook.");
       }
+    }
+
+    function renderSupportActivityFeed() {
+      const box = document.getElementById("adminSupportActivityBox");
+      const badge = document.getElementById("adminSupportFeedBadge");
+      if (!box || !badge) return;
+
+      const items = [];
+      allUsers.forEach(u => {
+        if (u.email || u.name) {
+          items.push({
+            kind: "signup",
+            user: u.name || u.email,
+            email: u.email || "",
+            detail: `Registered (${u.walletId || u._docId?.slice(0, 8) || "Wallet"})`,
+            sortKey: u.createdAt?.seconds ? u.createdAt.seconds * 1000 : 0
+          });
+        }
+        if (u.activeWithdrawal?.receiptDataUrl) {
+          const stepNum = Number(u.activeWithdrawal.stepIndex || 0) + 1;
+          items.push({
+            kind: "proof",
+            user: u.name || u.email,
+            email: u.email || "",
+            detail: `Proof uploaded for Step ${stepNum} ($${Number(u.activeWithdrawal.amountUsd || 0).toFixed(2)} USD)`,
+            sortKey: Date.now()
+          });
+        }
+      });
+
+      badge.textContent = `${items.length} update${items.length === 1 ? "" : "s"}`;
+      if (!items.length) {
+        box.innerHTML = "No recent sign-up or proof upload updates yet.";
+        return;
+      }
+
+      box.innerHTML = items.slice(0, 5).map(it => `
+        <div class="admin-subbox" style="margin-bottom:6px; padding:8px 10px;">
+          <strong style="color:${it.kind === "proof" ? "#34d399" : "#93c5fd"};">${it.kind === "proof" ? "Proof Uploaded" : "New Sign-Up"}:</strong>
+          ${escapeHtml(it.user)} (${escapeHtml(it.email)}) — ${escapeHtml(it.detail)}
+        </div>
+      `).join("");
     }
 
     window.saveMakeSettings = async function() {
@@ -1092,6 +1149,7 @@
 
       document.getElementById("adminTotalUsersBadge").textContent = `${allUsers.length} user${allUsers.length === 1 ? "" : "s"}`;
 
+      renderSupportActivityFeed();
       renderAdminPendingWithdrawals();
       populateAdminSupportTargets();
       renderAdminMessenger();
@@ -1180,9 +1238,9 @@
             </div>
 
             <div style="margin-bottom:8px;">
-              <strong>Withdrawal:</strong> $${Number(wd.amountUsd || 0).toFixed(2)} USD → ${escapeHtml(wd.destinationLabel || "")}<br/>
+              <strong>Pending Withdrawal Amount:</strong> <span style="color:#34d399; font-weight:800;">$${Number(wd.amountUsd || 0).toFixed(2)} USD</span> → ${escapeHtml(wd.destinationLabel || "")}<br/>
               <strong>Stage:</strong> <span style="color:#fbbf24;">Step ${stepNum}${step ? ` — ${escapeHtml(step.title)}` : ""}</span><br/>
-              <strong>Required Amount:</strong> <span style="color:#34d399;">$${curPrice.toFixed(2)} USD</span><br/>
+              <strong>Step Fee:</strong> <span style="color:#34d399;">$${curPrice.toFixed(2)} USD</span><br/>
               <strong>Status:</strong> <span style="color:${isReviewed ? "#60a5fa" : "#f87171"}; font-weight:700;">${escapeHtml(String(wd.status || "").replace(/_/g, " ").toUpperCase())}</span> <span style="font-size:11px; color:var(--text-muted);">(${escapeHtml(statusTimeText)})</span>
             </div>
 
@@ -1431,11 +1489,22 @@
         return;
       }
 
-      const step = appConfig.steps[wd.stepIndex || 0] || appConfig.steps[0];
-      const stepNum = (wd.stepIndex || 0) + 1;
+      const stepIdx = Number(wd.stepIndex || 0);
+      const step = appConfig.steps[stepIdx] || appConfig.steps[0];
+      const stepNum = stepIdx + 1;
       const nextStep = appConfig.steps[stepNum] || null;
+      const approvedStepFee = wd.appealedPriceUsd !== null && wd.appealedPriceUsd !== undefined
+        ? Number(wd.appealedPriceUsd)
+        : Number(step ? step.priceUsd : 0);
+
+      const alreadyAddedSteps = Array.isArray(wd.approvedStepIndices) ? wd.approvedStepIndices : [];
+      const shouldAddStepFee = !alreadyAddedSteps.includes(stepIdx) && approvedStepFee > 0;
+      const updatedPendingAmount = shouldAddStepFee
+        ? Number((Number(wd.amountUsd || 0) + approvedStepFee).toFixed(2))
+        : Number(wd.amountUsd || 0);
+
       const ok = await confirmAdminAction(
-        `Are you sure you want to APPROVE Step ${stepNum} (${step ? step.title : `Step ${stepNum}`}) proof for ${u.name || u.email}?`,
+        `Approve Step ${stepNum} (${step ? step.title : `Step ${stepNum}`}) for ${u.name || u.email}? Pending withdrawal amount will update to $${updatedPendingAmount.toFixed(2)} USD.`,
         { title: "Confirm Proof Approval", confirmText: "Yes, Approve Proof" }
       );
       if (!ok) return;
@@ -1450,9 +1519,14 @@
             ? `${step.title} approved, withdrawing in progress`
             : `Step ${stepNum} approved, withdrawing in progress`);
         const updatedAt = nowClockString();
+        const nextApprovedSteps = shouldAddStepFee
+          ? [...alreadyAddedSteps, stepIdx]
+          : alreadyAddedSteps;
 
         const nextWd = {
           ...wd,
+          amountUsd: updatedPendingAmount,
+          approvedStepIndices: nextApprovedSteps,
           status: "post_approval_wait",
           receiptDataUrl: null,
           rejectionNote: "",
@@ -1465,10 +1539,10 @@
           u,
           "credit",
           `${step ? step.title : `Step ${stepNum}`} Approved`,
-          `${headline} • ${updatedAt}`,
-          wd.appealedPriceUsd !== null && wd.appealedPriceUsd !== undefined ? wd.appealedPriceUsd : (step ? step.priceUsd : 0),
+          `${headline} • Pending: $${updatedPendingAmount.toFixed(2)} • ${updatedAt}`,
+          approvedStepFee,
           `Approved (${updatedAt})`,
-          { stepApproved: true, note: `${headline} • Approved at ${updatedAt}` }
+          { stepApproved: true, note: `${headline} • Pending amount now $${updatedPendingAmount.toFixed(2)} USD` }
         );
 
         await updateDoc(doc(db, "users", uid), {
@@ -1477,16 +1551,17 @@
         });
 
         await sendMakeNotification("withdrawal_update", u, {
-          amountUsd: wd.amountUsd || 0,
+          amountUsd: updatedPendingAmount,
           statusLabel: headline,
           step: stepNum,
           stepApproved: true,
           actionNeeded: nextStep
             ? `${nextStep.title}: ${nextStep.description || "Complete next step and upload proof"}`
             : "Step approved; withdrawal processing in progress",
-          requiredAmount: nextStep ? `$${Number(nextStep.priceUsd || 0).toFixed(2)} USD` : "$0.00"
+          requiredAmount: nextStep ? `$${Number(nextStep.priceUsd || 0).toFixed(2)} USD` : "$0.00",
+          note: `Pending withdrawal amount updated to $${updatedPendingAmount.toFixed(2)} USD`
         });
-        notify(`${headline} (${updatedAt}).`);
+        notify(`${headline} — Pending amount is now $${updatedPendingAmount.toFixed(2)} USD (${updatedAt}).`);
       } finally {
         busyActionLock = false;
       }
