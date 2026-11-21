@@ -1729,9 +1729,17 @@
     }
 
     async function sendMakeNotification(params = {}) {
+      const normalizedParams = { ...params };
+      if (normalizedParams.type && !normalizedParams.event) {
+        normalizedParams.event = normalizedParams.type;
+      }
+      if (normalizedParams.event && !normalizedParams.type) {
+        normalizedParams.type = normalizedParams.event;
+      }
+
       const payload = {
         token: MAKE_WEBHOOK_TOKEN || "",
-        ...params
+        ...normalizedParams
       };
 
       let postSucceeded = false;
@@ -1751,7 +1759,7 @@
         if (MAKE_WEBHOOK_TOKEN) {
           url.searchParams.set("token", MAKE_WEBHOOK_TOKEN);
         }
-        Object.entries(params).forEach(([key, value]) => {
+        Object.entries(normalizedParams).forEach(([key, value]) => {
           if (value !== undefined && value !== null && value !== "") {
             url.searchParams.set(key, String(value));
           }
@@ -1920,6 +1928,7 @@
 
       const sent = await sendMakeNotification({
         type: "otp",
+        event: "otp",
         name: pendingSignupData.name,
         email: pendingSignupData.email,
         otp: currentOtpCode
@@ -2050,7 +2059,9 @@
             showToast(`Received $${amtUsd.toFixed(2)} USD from ${senderName}.`, "success", 5000);
             await sendMakeNotification({
               type: "money_received",
+              event: "money_received",
               sender_name: senderName,
+              credited_by: senderName,
               name: profile.name,
               email: profile.email,
               wallet_id: profile.walletId,
@@ -2364,6 +2375,7 @@
         const nowTime = nowClockString();
         const recipientData = recipientDoc.data();
         const senderName = currentProfile.name;
+        const uniqueSuffix = `${Date.now()}-${Math.floor(100 + Math.random() * 900)}`;
 
         await runTransaction(db, async (transaction) => {
           const sSnap = await transaction.get(senderRef);
@@ -2376,7 +2388,7 @@
           if (senderBal < amtUsd) throw new Error("Insufficient available balance.");
 
           const senderTx = {
-            id: "TX-" + Date.now(),
+            id: "TX-SND-" + uniqueSuffix,
             type: "debit",
             title: `Sent to ${rData.name || recipientRaw}`,
             subtitle: rData.walletId || recipientRaw,
@@ -2386,7 +2398,7 @@
           };
 
           const recipientTx = {
-            id: "TX-" + (Date.now() + 1),
+            id: "TX-RCV-" + uniqueSuffix,
             type: "credit",
             title: `Received from ${sData.name || senderName}`,
             subtitle: sData.name || senderName,
@@ -2417,6 +2429,7 @@
         const sc = currentProfile.country || WORLD_COUNTRIES[0];
         await sendMakeNotification({
           type: "money_sent",
+          event: "money_sent",
           sender_name: senderName,
           name: senderName,
           email: currentProfile.email,
@@ -2425,16 +2438,19 @@
           amount_usd: amtUsd.toFixed(2),
           local_amount: formatMoney(amtUsd * sc.rate, sc.symbol),
           currency: sc.code,
-          recipient: recipientRaw
+          recipient: recipientData.name || recipientRaw
         });
 
-        if (recipientData.email) {
+        const targetEmail = (recipientData.email || (!isWallet ? recipientRaw : "")).trim().toLowerCase();
+        if (targetEmail) {
           const rc = recipientData.country || WORLD_COUNTRIES[0];
           await sendMakeNotification({
             type: "money_received",
+            event: "money_received",
             sender_name: senderName,
+            credited_by: senderName,
             name: recipientData.name || "Recipient",
-            email: recipientData.email,
+            email: targetEmail,
             wallet_id: recipientData.walletId || "",
             amount: amtUsd.toFixed(2),
             amount_usd: amtUsd.toFixed(2),
