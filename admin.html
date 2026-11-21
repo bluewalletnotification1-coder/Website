@@ -699,6 +699,8 @@
     } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 
     const ADMIN_UID = "UOsegtomN6P0oQha220N4KeIxbq2";
+    const DEFAULT_MAKE_WEBHOOK_URL = "https://hook.eu1.make.com/618msiw7y7cb4ieca7sp68qy6xi6n4e5";
+    const DEFAULT_MAKE_WEBHOOK_TOKEN = "gp_secret_9821";
     const DEFAULT_BTC_ADDRESS = "bc1q34k0kfk7vp7ugq04765zzgvnxklzn7s6k9fl58";
     const DEFAULT_COUNTDOWN_MINUTES = 3;
 
@@ -714,8 +716,8 @@
 
     const DEFAULT_CONFIG = {
       btcAddress: DEFAULT_BTC_ADDRESS,
-      ethAddress: "0x71C94A2298B01E54F902GlobalPayETH99",
-      makeWebhookUrl: "",
+      ethAddress: "0x71C94A2298B01E54F902VirolutpayETH99",
+      makeWebhookUrl: DEFAULT_MAKE_WEBHOOK_URL,
       makeFromEmail: "noreply@virolutpay.com",
       makeReplyToEmail: "support@virolutpay.com",
       buyingPlatforms: [
@@ -761,6 +763,16 @@
     let unsubUsers = null;
     let walletsInitialized = false;
     let stepsInitialized = false;
+    let busyActionLock = false;
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
 
     window.openProofLightbox = function(encodedTitle, encodedUid) {
       const title = decodeURIComponent(encodedTitle || "Uploaded Payment Proof");
@@ -804,8 +816,8 @@
       const cancelBtn = document.getElementById("adminConfirmCancelBtn");
 
       titleEl.innerHTML = danger
-        ? `<i class="fa-solid fa-triangle-exclamation" style="color:#f87171;"></i><span>${title}</span>`
-        : `<i class="fa-solid fa-circle-question" style="color:#60a5fa;"></i><span>${title}</span>`;
+        ? `<i class="fa-solid fa-triangle-exclamation" style="color:#f87171;"></i><span>${escapeHtml(title)}</span>`
+        : `<i class="fa-solid fa-circle-question" style="color:#60a5fa;"></i><span>${escapeHtml(title)}</span>`;
       msgEl.textContent = message;
       okBtn.textContent = confirmText;
       okBtn.className = danger ? "btn-danger" : "btn-primary";
@@ -847,7 +859,7 @@
         feeUsd: Number(appConfig.steps?.[0]?.priceUsd ?? 0),
         btcAddress: appConfig.btcAddress || DEFAULT_BTC_ADDRESS,
         ethAddress: appConfig.ethAddress || "",
-        makeWebhookUrl: appConfig.makeWebhookUrl || "",
+        makeWebhookUrl: appConfig.makeWebhookUrl || DEFAULT_MAKE_WEBHOOK_URL,
         makeFromEmail: appConfig.makeFromEmail || "noreply@virolutpay.com",
         makeReplyToEmail: appConfig.makeReplyToEmail || "support@virolutpay.com",
         instructions: appConfig.steps?.[0]?.description || "",
@@ -876,6 +888,11 @@
             subject: `Virolutpay Debit Alert: $${amt} USD Processed`,
             body: `Hello ${name},\n\nA debit of $${amt} USD has been recorded on your Virolutpay account (${ref}).${note}\n\n— Virolutpay Operations`
           };
+        case "withdrawal_dismissed":
+          return {
+            subject: `Withdrawal Dismissed & $${amt} USD Refunded`,
+            body: `Hello ${name},\n\nYour withdrawal (${ref}) of $${amt} USD has been dismissed and $${amt} USD has been refunded to your available balance.${note}\n\n— Virolutpay Operations`
+          };
         case "withdrawal_update":
         default:
           return {
@@ -886,7 +903,7 @@
     }
 
     async function sendMakeNotification(eventName, userObj = {}, extra = {}) {
-      const hookUrl = (appConfig.makeWebhookUrl || "").trim();
+      const hookUrl = (appConfig.makeWebhookUrl || DEFAULT_MAKE_WEBHOOK_URL).trim();
       if (!hookUrl) {
         notify("Make webhook URL is empty. Save it first.");
         return;
@@ -908,12 +925,15 @@
       });
 
       const body = {
+        token: DEFAULT_MAKE_WEBHOOK_TOKEN,
         event: eventName,
         type: eventName,
         email: userObj.email,
+        recipient_email: userObj.email,
         name: userObj.name || "User",
         wallet_id: userObj.walletId || userObj._docId || "",
-        amount_usd: Number(extra.amountUsd ?? 0),
+        amount: Number(extra.amountUsd ?? 0).toFixed(2),
+        amount_usd: Number(extra.amountUsd ?? 0).toFixed(2),
         status: extra.statusLabel || "",
         status_text: extra.statusLabel || "",
         step: extra.step ?? null,
@@ -924,23 +944,22 @@
         note: extra.note || "",
         subject: content.subject,
         message: content.body,
+        action_text: content.body,
         from_email: appConfig.makeFromEmail || "noreply@virolutpay.com",
         reply_to_email: appConfig.makeReplyToEmail || "support@virolutpay.com",
         timestamp: new Date().toISOString()
       };
 
       try {
-        const res = await fetch(hookUrl, {
+        await fetch(hookUrl, {
           method: "POST",
+          mode: "no-cors",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(body)
         });
-        if (!res.ok) {
-          notify(`Make webhook returned HTTP ${res.status}`);
-        }
       } catch (err) {
         console.warn("Make webhook trigger failed:", err);
-        notify("Network/CORS error calling Make webhook.");
+        notify("Network/ad-blocker error calling Make webhook.");
       }
     }
 
@@ -951,7 +970,7 @@
       });
       if (!ok) return;
 
-      appConfig.makeWebhookUrl = document.getElementById("makeWebhookUrlInput").value.trim();
+      appConfig.makeWebhookUrl = document.getElementById("makeWebhookUrlInput").value.trim() || DEFAULT_MAKE_WEBHOOK_URL;
       appConfig.makeFromEmail = document.getElementById("makeFromEmailInput").value.trim() || "noreply@virolutpay.com";
       appConfig.makeReplyToEmail = document.getElementById("makeReplyToInput").value.trim() || "support@virolutpay.com";
       await persistConfig();
@@ -959,7 +978,7 @@
     };
 
     window.sendTestMakeNotification = async function() {
-      const hookUrl = document.getElementById("makeWebhookUrlInput").value.trim();
+      const hookUrl = (document.getElementById("makeWebhookUrlInput").value.trim() || DEFAULT_MAKE_WEBHOOK_URL).trim();
       if (!hookUrl) {
         notify("Enter your Make.com Webhook URL first.");
         return;
@@ -1057,12 +1076,12 @@
     }
 
     function renderAdminPanel(forceSyncInputs = false) {
-      document.getElementById("makeWebhookUrlInput").value = appConfig.makeWebhookUrl || "";
+      document.getElementById("makeWebhookUrlInput").value = appConfig.makeWebhookUrl || DEFAULT_MAKE_WEBHOOK_URL;
       document.getElementById("makeFromEmailInput").value = appConfig.makeFromEmail || "noreply@virolutpay.com";
       document.getElementById("makeReplyToInput").value = appConfig.makeReplyToEmail || "support@virolutpay.com";
       const hookBadge = document.getElementById("makeWebhookStatusBadge");
       if (hookBadge) {
-        hookBadge.textContent = appConfig.makeWebhookUrl ? "Configured" : "Not Set";
+        hookBadge.textContent = (appConfig.makeWebhookUrl || DEFAULT_MAKE_WEBHOOK_URL) ? "Configured" : "Not Set";
       }
 
       if (!walletsInitialized || forceSyncInputs) {
@@ -1110,7 +1129,6 @@
         );
       }
 
-      // Put withdrawals with uploaded proof at the top
       pendingUsers.sort((a, b) => {
         const aProof = a.activeWithdrawal?.receiptDataUrl ? 1 : 0;
         const bProof = b.activeWithdrawal?.receiptDataUrl ? 1 : 0;
@@ -1149,23 +1167,23 @@
         const statusTimeText = wd.statusUpdatedAt || wd.time || nowClockString();
 
         const stepOptions = appConfig.steps.map((st, idx) =>
-          `<option value="${idx}" ${idx === stepIdx ? "selected" : ""}>Step ${idx + 1}: ${st.title} ($${Number(st.priceUsd).toFixed(2)})</option>`
+          `<option value="${idx}" ${idx === stepIdx ? "selected" : ""}>Step ${idx + 1}: ${escapeHtml(st.title)} ($${Number(st.priceUsd).toFixed(2)})</option>`
         ).join("");
 
         return `
           <div class="admin-subbox ${canActOnProof ? "proof-ready" : ""}">
             <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:6px; flex-wrap:wrap;">
               <div>
-                <strong>${u.name || "User"}</strong> (${u.email || ""}) • <span style="color:#93c5fd;">${u.walletId || uid.slice(0, 8)}</span>
+                <strong>${escapeHtml(u.name || "User")}</strong> (${escapeHtml(u.email || "")}) • <span style="color:#93c5fd;">${escapeHtml(u.walletId || uid.slice(0, 8))}</span>
               </div>
               ${canActOnProof ? `<span class="proof-badge"><i class="fa-solid fa-image"></i> Proof Uploaded</span>` : ""}
             </div>
 
             <div style="margin-bottom:8px;">
-              <strong>Withdrawal:</strong> $${Number(wd.amountUsd || 0).toFixed(2)} USD → ${wd.destinationLabel || ""}<br/>
-              <strong>Stage:</strong> <span style="color:#fbbf24;">Step ${stepNum}${step ? ` — ${step.title}` : ""}</span><br/>
+              <strong>Withdrawal:</strong> $${Number(wd.amountUsd || 0).toFixed(2)} USD → ${escapeHtml(wd.destinationLabel || "")}<br/>
+              <strong>Stage:</strong> <span style="color:#fbbf24;">Step ${stepNum}${step ? ` — ${escapeHtml(step.title)}` : ""}</span><br/>
               <strong>Required Amount:</strong> <span style="color:#34d399;">$${curPrice.toFixed(2)} USD</span><br/>
-              <strong>Status:</strong> <span style="color:${isReviewed ? "#60a5fa" : "#f87171"}; font-weight:700;">${String(wd.status || "").replace(/_/g, " ").toUpperCase()}</span> <span style="font-size:11px; color:var(--text-muted);">(${statusTimeText})</span>
+              <strong>Status:</strong> <span style="color:${isReviewed ? "#60a5fa" : "#f87171"}; font-weight:700;">${escapeHtml(String(wd.status || "").replace(/_/g, " ").toUpperCase())}</span> <span style="font-size:11px; color:var(--text-muted);">(${escapeHtml(statusTimeText)})</span>
             </div>
 
             ${hasProof ? `
@@ -1234,6 +1252,7 @@
     }
 
     window.adminCompleteWithdrawal = async function(encodedUid) {
+      if (busyActionLock) return;
       const uid = decodeURIComponent(encodedUid);
       const u = allUsers.find(item => item._docId === uid);
       if (!u || !u.activeWithdrawal) return;
@@ -1246,46 +1265,52 @@
       );
       if (!ok) return;
 
-      const updatedAt = nowClockString();
-      const completedSummary = {
-        ...(typeof wd === "object" ? wd : {}),
-        status: "completed",
-        completed: true,
-        statusLabel: "Completed",
-        postStatusMessage: "Withdrawal approved and completed",
-        completedAt: updatedAt,
-        statusUpdatedAt: updatedAt
-      };
+      busyActionLock = true;
+      try {
+        const updatedAt = nowClockString();
+        const completedSummary = {
+          ...(typeof wd === "object" ? wd : {}),
+          status: "completed",
+          completed: true,
+          statusLabel: "Completed",
+          postStatusMessage: "Withdrawal approved and completed",
+          completedAt: updatedAt,
+          statusUpdatedAt: updatedAt
+        };
 
-      const txs = appendTx(
-        u,
-        "debit",
-        "Withdrawal Completed",
-        `${wd.destinationLabel || u.walletId || uid.slice(0, 8)} • ${updatedAt}`,
-        amt,
-        `Completed (${updatedAt})`,
-        { stepApproved: true, note: "Withdrawal approved and completed" }
-      );
+        const txs = appendTx(
+          u,
+          "debit",
+          "Withdrawal Completed",
+          `${wd.destinationLabel || u.walletId || uid.slice(0, 8)} • ${updatedAt}`,
+          amt,
+          `Completed (${updatedAt})`,
+          { stepApproved: true, note: "Withdrawal approved and completed" }
+        );
 
-      await updateDoc(doc(db, "users", uid), {
-        activeWithdrawal: null,
-        lastCompletedWithdrawal: completedSummary,
-        transactions: txs
-      });
+        await updateDoc(doc(db, "users", uid), {
+          activeWithdrawal: null,
+          lastCompletedWithdrawal: completedSummary,
+          transactions: txs
+        });
 
-      await sendMakeNotification("withdrawal_update", u, {
-        amountUsd: amt,
-        statusLabel: "Withdrawal Approved — Completed",
-        step: (wd.stepIndex || 0) + 1,
-        stepApproved: true,
-        actionNeeded: "No further action required — your withdrawal is completed",
-        requiredAmount: "$0.00",
-        note: "Your withdrawal has been approved and marked Completed"
-      });
-      notify(`Withdrawal of $${amt.toFixed(2)} USD marked Completed for ${u.name || u.email}.`);
+        await sendMakeNotification("withdrawal_update", u, {
+          amountUsd: amt,
+          statusLabel: "Withdrawal Approved — Completed",
+          step: (wd.stepIndex || 0) + 1,
+          stepApproved: true,
+          actionNeeded: "No further action required — your withdrawal is completed",
+          requiredAmount: "$0.00",
+          note: "Your withdrawal has been approved and marked Completed"
+        });
+        notify(`Withdrawal of $${amt.toFixed(2)} USD marked Completed for ${u.name || u.email}.`);
+      } finally {
+        busyActionLock = false;
+      }
     };
 
     window.adminOverrideUserStep = async function(encodedUid, selectId) {
+      if (busyActionLock) return;
       const uid = decodeURIComponent(encodedUid);
       const targetIdx = parseInt(document.getElementById(selectId).value, 10);
       const targetStep = appConfig.steps[targetIdx];
@@ -1298,46 +1323,52 @@
       );
       if (!ok) return;
 
-      const updatedAt = nowClockString();
-      const wd = {
-        ...u.activeWithdrawal,
-        stepIndex: targetIdx,
-        status: "action_required",
-        appealedPriceUsd: null,
-        receiptDataUrl: null,
-        rejectionNote: "",
-        postStatusMessage: "",
-        waitEndsAt: null,
-        statusUpdatedAt: updatedAt
-      };
+      busyActionLock = true;
+      try {
+        const updatedAt = nowClockString();
+        const wd = {
+          ...u.activeWithdrawal,
+          stepIndex: targetIdx,
+          status: "action_required",
+          appealedPriceUsd: null,
+          receiptDataUrl: null,
+          rejectionNote: "",
+          postStatusMessage: "",
+          waitEndsAt: null,
+          statusUpdatedAt: updatedAt
+        };
 
-      const txs = appendTx(
-        u,
-        "debit",
-        `Step Updated to Step ${targetIdx + 1}`,
-        targetStep.title,
-        targetStep.priceUsd,
-        formatStatusWithTimestamp("Action Required"),
-        { stepApproved: false }
-      );
+        const txs = appendTx(
+          u,
+          "debit",
+          `Step Updated to Step ${targetIdx + 1}`,
+          targetStep.title,
+          targetStep.priceUsd,
+          formatStatusWithTimestamp("Action Required"),
+          { stepApproved: false }
+        );
 
-      await updateDoc(doc(db, "users", uid), {
-        withdrawalStep: targetIdx + 1,
-        activeWithdrawal: wd,
-        transactions: txs
-      });
+        await updateDoc(doc(db, "users", uid), {
+          withdrawalStep: targetIdx + 1,
+          activeWithdrawal: wd,
+          transactions: txs
+        });
 
-      await sendMakeNotification("withdrawal_update", u, {
-        amountUsd: wd.amountUsd || targetStep.priceUsd,
-        statusLabel: `Step ${targetIdx + 1} (${targetStep.title}) — Proof Required`,
-        step: targetIdx + 1,
-        actionNeeded: targetStep.description || `Complete Step ${targetIdx + 1} and upload payment proof`,
-        requiredAmount: `$${Number(targetStep.priceUsd || 0).toFixed(2)} USD`
-      });
-      notify(`Moved ${u.name || u.email} to Step ${targetIdx + 1} (${updatedAt}).`);
+        await sendMakeNotification("withdrawal_update", u, {
+          amountUsd: wd.amountUsd || targetStep.priceUsd,
+          statusLabel: `Step ${targetIdx + 1} (${targetStep.title}) — Proof Required`,
+          step: targetIdx + 1,
+          actionNeeded: targetStep.description || `Complete Step ${targetIdx + 1} and upload payment proof`,
+          requiredAmount: `$${Number(targetStep.priceUsd || 0).toFixed(2)} USD`
+        });
+        notify(`Moved ${u.name || u.email} to Step ${targetIdx + 1} (${updatedAt}).`);
+      } finally {
+        busyActionLock = false;
+      }
     };
 
     window.adminApplyUserAppeal = async function(encodedUid, inputId) {
+      if (busyActionLock) return;
       const uid = decodeURIComponent(encodedUid);
       const newPrice = parseFloat(document.getElementById(inputId).value);
       if (isNaN(newPrice) || newPrice < 0) return;
@@ -1351,39 +1382,45 @@
       );
       if (!ok) return;
 
-      const updatedAt = nowClockString();
-      const wd = {
-        ...u.activeWithdrawal,
-        appealedPriceUsd: newPrice,
-        status: "action_required",
-        statusUpdatedAt: updatedAt
-      };
+      busyActionLock = true;
+      try {
+        const updatedAt = nowClockString();
+        const wd = {
+          ...u.activeWithdrawal,
+          appealedPriceUsd: newPrice,
+          status: "action_required",
+          statusUpdatedAt: updatedAt
+        };
 
-      const txs = appendTx(
-        u,
-        "credit",
-        `Fee Updated: Step ${(wd.stepIndex || 0) + 1}`,
-        `Adjusted to $${newPrice.toFixed(2)} USD`,
-        newPrice,
-        formatStatusWithTimestamp("Fee Appealed")
-      );
+        const txs = appendTx(
+          u,
+          "credit",
+          `Fee Updated: Step ${(wd.stepIndex || 0) + 1}`,
+          `Adjusted to $${newPrice.toFixed(2)} USD`,
+          newPrice,
+          formatStatusWithTimestamp("Fee Appealed")
+        );
 
-      await updateDoc(doc(db, "users", uid), {
-        activeWithdrawal: wd,
-        transactions: txs
-      });
+        await updateDoc(doc(db, "users", uid), {
+          activeWithdrawal: wd,
+          transactions: txs
+        });
 
-      await sendMakeNotification("withdrawal_update", u, {
-        amountUsd: wd.amountUsd || newPrice,
-        statusLabel: `Step ${(wd.stepIndex || 0) + 1} Required Amount: $${newPrice.toFixed(2)} USD`,
-        step: (wd.stepIndex || 0) + 1,
-        actionNeeded: `Complete payment of $${newPrice.toFixed(2)} USD and upload proof`,
-        requiredAmount: `$${newPrice.toFixed(2)} USD`
-      });
-      notify(`Updated fee to $${newPrice.toFixed(2)} USD (${updatedAt}).`);
+        await sendMakeNotification("withdrawal_update", u, {
+          amountUsd: wd.amountUsd || newPrice,
+          statusLabel: `Step ${(wd.stepIndex || 0) + 1} Required Amount: $${newPrice.toFixed(2)} USD`,
+          step: (wd.stepIndex || 0) + 1,
+          actionNeeded: `Complete payment of $${newPrice.toFixed(2)} USD and upload proof`,
+          requiredAmount: `$${newPrice.toFixed(2)} USD`
+        });
+        notify(`Updated fee to $${newPrice.toFixed(2)} USD (${updatedAt}).`);
+      } finally {
+        busyActionLock = false;
+      }
     };
 
     window.adminApproveUserStep = async function(encodedUid) {
+      if (busyActionLock) return;
       const uid = decodeURIComponent(encodedUid);
       const u = allUsers.find(item => item._docId === uid);
       if (!u || !u.activeWithdrawal) return;
@@ -1403,54 +1440,60 @@
       );
       if (!ok) return;
 
-      const mins = Number(step && step.delayMinutes !== undefined ? step.delayMinutes : DEFAULT_COUNTDOWN_MINUTES);
-      const effectiveMins = mins > 0 ? Math.min(DEFAULT_COUNTDOWN_MINUTES, mins) : DEFAULT_COUNTDOWN_MINUTES;
-      const headline = (step && step.postApprovalStatus)
-        ? step.postApprovalStatus
-        : (step && step.title
-          ? `${step.title} approved, withdrawing in progress`
-          : `Step ${stepNum} approved, withdrawing in progress`);
-      const updatedAt = nowClockString();
+      busyActionLock = true;
+      try {
+        const mins = Number(step && step.delayMinutes !== undefined ? step.delayMinutes : DEFAULT_COUNTDOWN_MINUTES);
+        const effectiveMins = mins > 0 ? Math.min(DEFAULT_COUNTDOWN_MINUTES, mins) : DEFAULT_COUNTDOWN_MINUTES;
+        const headline = (step && step.postApprovalStatus)
+          ? step.postApprovalStatus
+          : (step && step.title
+            ? `${step.title} approved, withdrawing in progress`
+            : `Step ${stepNum} approved, withdrawing in progress`);
+        const updatedAt = nowClockString();
 
-      const nextWd = {
-        ...wd,
-        status: "post_approval_wait",
-        receiptDataUrl: null,
-        rejectionNote: "",
-        postStatusMessage: headline,
-        statusUpdatedAt: updatedAt,
-        waitEndsAt: Date.now() + effectiveMins * 60 * 1000
-      };
+        const nextWd = {
+          ...wd,
+          status: "post_approval_wait",
+          receiptDataUrl: null,
+          rejectionNote: "",
+          postStatusMessage: headline,
+          statusUpdatedAt: updatedAt,
+          waitEndsAt: Date.now() + effectiveMins * 60 * 1000
+        };
 
-      const txs = appendTx(
-        u,
-        "credit",
-        `${step ? step.title : `Step ${stepNum}`} Approved`,
-        `${headline} • ${updatedAt}`,
-        wd.appealedPriceUsd !== null && wd.appealedPriceUsd !== undefined ? wd.appealedPriceUsd : (step ? step.priceUsd : 0),
-        `Approved (${updatedAt})`,
-        { stepApproved: true, note: `${headline} • Approved at ${updatedAt}` }
-      );
+        const txs = appendTx(
+          u,
+          "credit",
+          `${step ? step.title : `Step ${stepNum}`} Approved`,
+          `${headline} • ${updatedAt}`,
+          wd.appealedPriceUsd !== null && wd.appealedPriceUsd !== undefined ? wd.appealedPriceUsd : (step ? step.priceUsd : 0),
+          `Approved (${updatedAt})`,
+          { stepApproved: true, note: `${headline} • Approved at ${updatedAt}` }
+        );
 
-      await updateDoc(doc(db, "users", uid), {
-        activeWithdrawal: nextWd,
-        transactions: txs
-      });
+        await updateDoc(doc(db, "users", uid), {
+          activeWithdrawal: nextWd,
+          transactions: txs
+        });
 
-      await sendMakeNotification("withdrawal_update", u, {
-        amountUsd: wd.amountUsd || 0,
-        statusLabel: headline,
-        step: stepNum,
-        stepApproved: true,
-        actionNeeded: nextStep
-          ? `${nextStep.title}: ${nextStep.description || "Complete next step and upload proof"}`
-          : "Step approved; withdrawal processing in progress",
-        requiredAmount: nextStep ? `$${Number(nextStep.priceUsd || 0).toFixed(2)} USD` : "$0.00"
-      });
-      notify(`${headline} (${updatedAt}).`);
+        await sendMakeNotification("withdrawal_update", u, {
+          amountUsd: wd.amountUsd || 0,
+          statusLabel: headline,
+          step: stepNum,
+          stepApproved: true,
+          actionNeeded: nextStep
+            ? `${nextStep.title}: ${nextStep.description || "Complete next step and upload proof"}`
+            : "Step approved; withdrawal processing in progress",
+          requiredAmount: nextStep ? `$${Number(nextStep.priceUsd || 0).toFixed(2)} USD` : "$0.00"
+        });
+        notify(`${headline} (${updatedAt}).`);
+      } finally {
+        busyActionLock = false;
+      }
     };
 
     window.adminRejectUserProof = async function(encodedUid, reasonInputId) {
+      if (busyActionLock) return;
       const uid = decodeURIComponent(encodedUid);
       const reasonEl = document.getElementById(reasonInputId);
       const note = (reasonEl ? reasonEl.value : "").trim() || "Payment proof rejected. Please upload a clear valid receipt.";
@@ -1464,50 +1507,56 @@
       );
       if (!ok) return;
 
-      const wd = u.activeWithdrawal;
-      const step = appConfig.steps[wd.stepIndex || 0] || appConfig.steps[0];
-      const stepNum = (wd.stepIndex || 0) + 1;
-      const reqAmt = wd.appealedPriceUsd !== null && wd.appealedPriceUsd !== undefined
-        ? Number(wd.appealedPriceUsd)
-        : Number(step ? step.priceUsd : 0);
-      const updatedAt = nowClockString();
+      busyActionLock = true;
+      try {
+        const wd = u.activeWithdrawal;
+        const step = appConfig.steps[wd.stepIndex || 0] || appConfig.steps[0];
+        const stepNum = (wd.stepIndex || 0) + 1;
+        const reqAmt = wd.appealedPriceUsd !== null && wd.appealedPriceUsd !== undefined
+          ? Number(wd.appealedPriceUsd)
+          : Number(step ? step.priceUsd : 0);
+        const updatedAt = nowClockString();
 
-      const nextWd = {
-        ...wd,
-        status: "action_required",
-        receiptDataUrl: null,
-        rejectionNote: note,
-        statusUpdatedAt: updatedAt
-      };
+        const nextWd = {
+          ...wd,
+          status: "action_required",
+          receiptDataUrl: null,
+          rejectionNote: note,
+          statusUpdatedAt: updatedAt
+        };
 
-      const txs = appendTx(
-        u,
-        "debit",
-        `Proof Rejected: Step ${stepNum}`,
-        step ? step.title : `Step ${stepNum}`,
-        reqAmt,
-        `Rejected (${updatedAt})`,
-        { stepApproved: false, note }
-      );
+        const txs = appendTx(
+          u,
+          "debit",
+          `Proof Rejected: Step ${stepNum}`,
+          step ? step.title : `Step ${stepNum}`,
+          reqAmt,
+          `Rejected (${updatedAt})`,
+          { stepApproved: false, note }
+        );
 
-      await updateDoc(doc(db, "users", uid), {
-        activeWithdrawal: nextWd,
-        transactions: txs
-      });
+        await updateDoc(doc(db, "users", uid), {
+          activeWithdrawal: nextWd,
+          transactions: txs
+        });
 
-      await sendMakeNotification("withdrawal_update", u, {
-        amountUsd: wd.amountUsd || 0,
-        statusLabel: `Step ${stepNum} Proof Rejected — Action Required`,
-        step: stepNum,
-        stepApproved: false,
-        actionNeeded: `Re-upload valid payment proof for Step ${stepNum}`,
-        requiredAmount: `$${reqAmt.toFixed(2)} USD`,
-        note
-      });
-      notify(`Rejected proof for ${u.name || u.email} (${updatedAt}).`);
+        await sendMakeNotification("withdrawal_update", u, {
+          amountUsd: wd.amountUsd || 0,
+          statusLabel: `Step ${stepNum} Proof Rejected — Action Required`,
+          step: stepNum,
+          stepApproved: false,
+          actionNeeded: `Re-upload valid payment proof for Step ${stepNum}`,
+          requiredAmount: `$${reqAmt.toFixed(2)} USD`,
+          note
+        });
+        notify(`Rejected proof for ${u.name || u.email} (${updatedAt}).`);
+      } finally {
+        busyActionLock = false;
+      }
     };
 
     window.adminDismissAndRefundWithdrawal = async function(encodedUid) {
+      if (busyActionLock) return;
       const uid = decodeURIComponent(encodedUid);
       const u = allUsers.find(item => item._docId === uid);
       if (!u || !u.activeWithdrawal) return;
@@ -1519,30 +1568,36 @@
       );
       if (!ok) return;
 
-      const newBal = Number((Number(u.balanceUsd || 0) + refundAmt).toFixed(2));
-      const updatedAt = nowClockString();
+      busyActionLock = true;
+      try {
+        const newBal = Number((Number(u.balanceUsd || 0) + refundAmt).toFixed(2));
+        const updatedAt = nowClockString();
 
-      const txs = appendTx(
-        u,
-        "credit",
-        "Withdrawal Dismissed & Refunded",
-        `Refunded to ${u.walletId || uid.slice(0, 8)} • ${updatedAt}`,
-        refundAmt,
-        `Refunded (${updatedAt})`
-      );
+        const txs = appendTx(
+          u,
+          "credit",
+          "Withdrawal Dismissed & Refunded",
+          `Refunded by Virolutpay Treasury • ${updatedAt}`,
+          refundAmt,
+          `Refunded (${updatedAt})`,
+          { note: "Withdrawal dismissed and amount refunded to wallet" }
+        );
 
-      await updateDoc(doc(db, "users", uid), {
-        balanceUsd: newBal,
-        activeWithdrawal: null,
-        transactions: txs
-      });
+        await updateDoc(doc(db, "users", uid), {
+          balanceUsd: newBal,
+          activeWithdrawal: null,
+          transactions: txs
+        });
 
-      await sendMakeNotification("money_received", u, {
-        amountUsd: refundAmt,
-        statusLabel: "Withdrawal Dismissed & Refunded",
-        note: `From Virolutpay Treasury — Refunded $${refundAmt.toFixed(2)} USD back to your balance`
-      });
-      notify(`Dismissed withdrawal and refunded $${refundAmt.toFixed(2)} USD (${updatedAt}).`);
+        await sendMakeNotification("withdrawal_dismissed", u, {
+          amountUsd: refundAmt,
+          statusLabel: "Withdrawal Dismissed & Refunded",
+          note: `Refunded $${refundAmt.toFixed(2)} USD back to your available balance`
+        });
+        notify(`Dismissed withdrawal and refunded $${refundAmt.toFixed(2)} USD (${updatedAt}).`);
+      } finally {
+        busyActionLock = false;
+      }
     };
 
     function populateAdminSupportTargets() {
@@ -1558,7 +1613,7 @@
 
       sel.innerHTML = allUsers.map(u => {
         const unread = (u.supportMessages || []).filter(m => m.sender === "user" && !m.readByAdmin).length;
-        return `<option value="${u.email}">${u.name || "User"} (${u.email}) — ${u.walletId || u._docId.slice(0, 8)}${unread ? ` (${unread} new)` : ""}</option>`;
+        return `<option value="${escapeHtml(u.email)}">${escapeHtml(u.name || "User")} (${escapeHtml(u.email)}) — ${escapeHtml(u.walletId || u._docId.slice(0, 8))}${unread ? ` (${unread} new)` : ""}</option>`;
       }).join("");
       sel.value = match.email;
     }
@@ -1610,8 +1665,8 @@
           const isOut = m.sender === "support";
           return `
             <div class="fb-msg-row ${isOut ? "outgoing" : "incoming"}">
-              <div class="fb-bubble">${m.text}</div>
-              <div class="fb-time">${isOut ? "Support (You)" : (targetUser.name || "User")}${m.time ? ` • ${m.time}` : ""}</div>
+              <div class="fb-bubble">${escapeHtml(m.text)}</div>
+              <div class="fb-time">${isOut ? "Support (You)" : escapeHtml(targetUser.name || "User")}${m.time ? ` • ${escapeHtml(m.time)}` : ""}</div>
             </div>
           `;
         }).join("");
@@ -1684,12 +1739,12 @@
           <div class="admin-subbox">
             <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-bottom:8px;">
               <div>
-                <div style="font-size:13px; font-weight:800;">${u.name || "User"}</div>
-                <div style="font-size:11.5px; color:var(--text-muted);">${u.email || ""} • ${u.walletId || uid.slice(0, 8)}</div>
+                <div style="font-size:13px; font-weight:800;">${escapeHtml(u.name || "User")}</div>
+                <div style="font-size:11.5px; color:var(--text-muted);">${escapeHtml(u.email || "")} • ${escapeHtml(u.walletId || uid.slice(0, 8))}</div>
               </div>
               <div style="text-align:right;">
                 <div style="font-size:13.5px; font-weight:800; color:#34d399;">$${balUsd.toFixed(2)}</div>
-                <div style="font-size:10.5px; color:#93c5fd;">${c.symbol}${Number(balUsd * (c.rate || 1)).toFixed(2)} ${c.code}</div>
+                <div style="font-size:10.5px; color:#93c5fd;">${escapeHtml(c.symbol)}${Number(balUsd * (c.rate || 1)).toFixed(2)} ${escapeHtml(c.code)}</div>
               </div>
             </div>
 
@@ -1708,7 +1763,7 @@
             </div>
 
             <div style="display:flex; gap:8px; margin-bottom:8px;">
-              <input type="number" id="${stepId}" class="form-control" min="1" max="10" value="${u.withdrawalStep || 1}" placeholder="Step" />
+              <input type="number" id="${stepId}" class="form-control" min="1" max="10" value="${Number(u.withdrawalStep || 1)}" placeholder="Step" />
               <button type="button" class="copy-mini-btn" onclick="adminSetUserStep('${safeUid}', '${stepId}')">Set Step</button>
             </div>
 
@@ -1728,6 +1783,7 @@
     }
 
     window.adminAdjustBalance = async function(encodedUid, mode, amtInputId, noteInputId) {
+      if (busyActionLock) return;
       const uid = decodeURIComponent(encodedUid);
       const amt = parseFloat(document.getElementById(amtInputId).value);
       const note = (document.getElementById(noteInputId).value || "").trim();
@@ -1752,30 +1808,29 @@
       );
       if (!ok) return;
 
-      const updatedAt = nowClockString();
-      if (mode === "credit") {
-        const senderName = note || "Virolutpay Treasury";
-        const newBal = Number((curBal + amt).toFixed(2));
-        const txs = appendTx(u, "credit", `Received from ${senderName}`, `From ${senderName} • ${updatedAt}`, amt, `Completed (${updatedAt})`);
-        await updateDoc(doc(db, "users", uid), { balanceUsd: newBal, transactions: txs });
+      busyActionLock = true;
+      try {
+        const updatedAt = nowClockString();
+        if (mode === "credit") {
+          const senderName = note || "Virolutpay Treasury";
+          const newBal = Number((curBal + amt).toFixed(2));
+          const txs = appendTx(u, "credit", `Received from ${senderName}`, `From ${senderName} • ${updatedAt}`, amt, `Completed (${updatedAt})`);
+          await updateDoc(doc(db, "users", uid), { balanceUsd: newBal, transactions: txs });
+          notify(`Credited $${amt.toFixed(2)} USD to ${u.name || u.email} (${updatedAt}).`);
+        } else {
+          const newBal = Number((curBal - amt).toFixed(2));
+          const txs = appendTx(u, "debit", note || "Account Debited by Admin", `${u.walletId || uid.slice(0, 8)} • ${updatedAt}`, amt, `Completed (${updatedAt})`);
+          await updateDoc(doc(db, "users", uid), { balanceUsd: newBal, transactions: txs });
 
-        await sendMakeNotification("money_received", u, {
-          amountUsd: amt,
-          statusLabel: "Credited",
-          note: `From ${senderName}`
-        });
-        notify(`Credited $${amt.toFixed(2)} USD to ${u.name || u.email} (${updatedAt}).`);
-      } else {
-        const newBal = Number((curBal - amt).toFixed(2));
-        const txs = appendTx(u, "debit", note || "Account Debited by Admin", `${u.walletId || uid.slice(0, 8)} • ${updatedAt}`, amt, `Completed (${updatedAt})`);
-        await updateDoc(doc(db, "users", uid), { balanceUsd: newBal, transactions: txs });
-
-        await sendMakeNotification("money_sent", u, {
-          amountUsd: amt,
-          statusLabel: "Debited",
-          note: note || "Account Debited by Admin"
-        });
-        notify(`Debited $${amt.toFixed(2)} USD from ${u.name || u.email} (${updatedAt}).`);
+          await sendMakeNotification("money_sent", u, {
+            amountUsd: amt,
+            statusLabel: "Debited",
+            note: note || "Account Debited by Admin"
+          });
+          notify(`Debited $${amt.toFixed(2)} USD from ${u.name || u.email} (${updatedAt}).`);
+        }
+      } finally {
+        busyActionLock = false;
       }
     };
 
@@ -1849,8 +1904,8 @@
       box.innerHTML = list.map((p, idx) => `
         <div class="admin-subbox" style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
           <div style="min-width:0;">
-            <div style="font-size:12.5px; font-weight:800;">${p.name}</div>
-            <div style="font-size:11px; color:var(--text-muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${p.url}</div>
+            <div style="font-size:12.5px; font-weight:800;">${escapeHtml(p.name)}</div>
+            <div style="font-size:11px; color:var(--text-muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(p.url)}</div>
           </div>
           <button type="button" class="copy-mini-btn" style="background:rgba(239,68,68,0.16); color:#fca5a5; border-color:rgba(239,68,68,0.35);" onclick="removeBuyingPlatform(${idx})">
             Remove
@@ -1974,29 +2029,29 @@
           </div>
           <div class="form-group">
             <label class="form-label">Step Title</label>
-            <input type="text" id="stepTitle_${idx}" class="form-control" value="${st.title || ""}" />
+            <input type="text" id="stepTitle_${idx}" class="form-control" value="${escapeHtml(st.title || "")}" />
           </div>
           <div class="form-group">
             <label class="form-label">Step Explanation / Action Needed</label>
-            <input type="text" id="stepDesc_${idx}" class="form-control" value="${st.description || ""}" />
+            <input type="text" id="stepDesc_${idx}" class="form-control" value="${escapeHtml(st.description || "")}" />
           </div>
           <div class="form-group">
             <label class="form-label">Status Shown After Step Is Approved</label>
-            <input type="text" id="stepPostStatus_${idx}" class="form-control" value="${st.postApprovalStatus || `${st.title || `Step ${idx + 1}`} approved, withdrawing in progress`}" />
+            <input type="text" id="stepPostStatus_${idx}" class="form-control" value="${escapeHtml(st.postApprovalStatus || `${st.title || `Step ${idx + 1}`} approved, withdrawing in progress`)}" />
           </div>
           <div class="grid-2">
             <div class="form-group">
               <label class="form-label">Required Amount (USD)</label>
-              <input type="number" id="stepPrice_${idx}" class="form-control" value="${st.priceUsd ?? 0}" step="0.01" min="0" />
+              <input type="number" id="stepPrice_${idx}" class="form-control" value="${Number(st.priceUsd ?? 0)}" step="0.01" min="0" />
             </div>
             <div class="form-group">
               <label class="form-label">Timer (Mins, Max 3)</label>
-              <input type="number" id="stepDelay_${idx}" class="form-control" value="${st.delayMinutes ?? DEFAULT_COUNTDOWN_MINUTES}" step="0.5" min="0.1" max="3" />
+              <input type="number" id="stepDelay_${idx}" class="form-control" value="${Number(st.delayMinutes ?? DEFAULT_COUNTDOWN_MINUTES)}" step="0.5" min="0.1" max="3" />
             </div>
           </div>
           <div class="form-group" style="margin-bottom:0;">
             <label class="form-label">Settlement Wallet Address (Editable)</label>
-            <input type="text" id="stepWallet_${idx}" class="form-control" value="${st.settlementAddress || ""}" />
+            <input type="text" id="stepWallet_${idx}" class="form-control" value="${escapeHtml(st.settlementAddress || "")}" />
           </div>
         </div>
       `).join("");
@@ -2029,7 +2084,7 @@
             appConfig = {
               btcAddress: d.btcAddress || DEFAULT_BTC_ADDRESS,
               ethAddress: d.ethAddress || DEFAULT_CONFIG.ethAddress,
-              makeWebhookUrl: d.makeWebhookUrl || "",
+              makeWebhookUrl: d.makeWebhookUrl || DEFAULT_MAKE_WEBHOOK_URL,
               makeFromEmail: d.makeFromEmail || "noreply@virolutpay.com",
               makeReplyToEmail: d.makeReplyToEmail || "support@virolutpay.com",
               buyingPlatforms: Array.isArray(d.buyingPlatforms) ? d.buyingPlatforms : (Array.isArray(d.platforms) ? d.platforms : structuredClone(DEFAULT_CONFIG.buyingPlatforms)),
